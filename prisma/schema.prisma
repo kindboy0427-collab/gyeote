@@ -1,0 +1,75 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id            String         @id @default(cuid())
+  email         String         @unique
+  name          String?
+  createdAt     DateTime       @default(now())
+  parents       Parent[]
+  subscriptions Subscription[]
+}
+
+model Parent {
+  id          String     @id @default(cuid())
+  userId      String
+  user        User       @relation(fields: [userId], references: [id])
+  name        String
+  phone       String
+  kakaoId     String?
+  morningTime String     @default("09:00")
+  isActive    Boolean    @default(true)
+  createdAt   DateTime   @default(now())
+  responses   Response[]
+  reports     Report[]
+  messages    Message[]
+}
+
+model Response {
+  id          String   @id @default(cuid())
+  parentId    String
+  parent      Parent   @relation(fields: [parentId], references: [id])
+  date        DateTime @default(now())
+  responded   Boolean  @default(false)
+  respondedAt DateTime?
+  message     String?
+  type        String   @default("morning")
+}
+
+model Message {
+  id        String   @id @default(cuid())
+  parentId  String
+  parent    Parent   @relation(fields: [parentId], references: [id])
+  role      String
+  content   String
+  createdAt DateTime @default(now())
+}
+
+model Report {
+  id        String   @id @default(cuid())
+  parentId  String
+  parent    Parent   @relation(fields: [parentId], references: [id])
+  type      String
+  weekStart DateTime
+  content   String
+  sentAt    DateTime?
+  createdAt DateTime @default(now())
+}
+
+model Subscription {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id])
+  plan          String   @default("care")
+  price         Int      @default(5900)
+  billingKey    String?
+  status        String   @default("active")
+  nextBillingAt DateTime?
+  createdAt     DateTime @default(now())
+}
