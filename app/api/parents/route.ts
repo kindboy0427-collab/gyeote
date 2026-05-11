@@ -39,3 +39,23 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Failed', detail: String(e) }, { status: 500 })
   }
 }
+
+export async function GET() {
+  const session = await getServerSession(authOptions)
+  const kakaoId = (session?.user as any)?.id
+
+  if (!kakaoId) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  try {
+    const user = await prisma.user.findUnique({
+      where: { email: `kakao_${kakaoId}@gyeote.com` },
+      include: { parents: true },
+    })
+
+    return NextResponse.json({ parents: user?.parents ?? [] })
+  } catch (e) {
+    return NextResponse.json({ error: 'Failed', detail: String(e) }, { status: 500 })
+  }
+}
