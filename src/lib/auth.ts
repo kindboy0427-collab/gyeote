@@ -20,7 +20,7 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, profile }: any) {
       if (profile) {
         token.email = profile.kakao_account?.email ?? `kakao_${token.sub}@gyeote.com`
-        token.name = profile.properties?.nickname ?? '사용자'
+        token.name = profile.properties?.nickname ?? 'user'
       }
       return token
     },
