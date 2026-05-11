@@ -6,7 +6,7 @@ import { prisma } from '../../../src/lib/prisma'
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions)
 
-  const kakaoId = session?.user?.id
+const kakaoId = (session?.user as any)?.id
   if (!kakaoId) {
     return NextResponse.json({ error: '로그인 필요' }, { status: 401 })
   }
@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
       update: {},
       create: {
         email: `kakao_${kakaoId}@gyeote.com`,
-        name: session.user?.name ?? '사용자',
+        name: session?.user?.name ?? '사용자',
       },
     })
 

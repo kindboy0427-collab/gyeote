@@ -9,22 +9,18 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
-    async session({ session, token }) {
-      if (token?.email) {
-        session.user.email = token.email
-      }
-      if (token?.name) {
-        session.user.name = token.name
-      }
-      if (token?.sub) {
-        session.user.id = token.sub
+    async session({ session, token }: any) {
+      if (session.user) {
+        if (token?.email) session.user.email = token.email
+        if (token?.name) session.user.name = token.name
+        if (token?.sub) session.user.id = token.sub
       }
       return session
     },
-    async jwt({ token, profile }) {
+    async jwt({ token, profile }: any) {
       if (profile) {
-        token.email = (profile as any).kakao_account?.email ?? `kakao_${token.sub}@gyeote.com`
-        token.name = (profile as any).properties?.nickname ?? '사용자'
+        token.email = profile.kakao_account?.email ?? `kakao_${token.sub}@gyeote.com`
+        token.name = profile.properties?.nickname ?? '사용자'
       }
       return token
     },
