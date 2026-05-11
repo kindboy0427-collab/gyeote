@@ -8,8 +8,13 @@ export default async function Dashboard() {
   if (!session) redirect('/login')
 
   const kakaoId = (session?.user as any)?.id
-  const user = await prisma.user.findUnique({
-    where: { email: `kakao_${kakaoId}@gyeote.com` },
+  const user = await prisma.user.findFirst({
+    where: {
+      OR: [
+        { email: `kakao_${kakaoId}@gyeote.com` },
+        { email: session.user?.email ?? '' },
+      ]
+    },
     include: { parents: true },
   })
   const parents = user?.parents ?? []
