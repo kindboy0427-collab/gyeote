@@ -8,7 +8,7 @@ export default function PaymentPage() {
   const handlePayment = async () => {
     setLoading(true)
     try {
-      const { loadTossPayments } = await import('@tosspayments/payment-widget-sdk')
+      const { loadTossPayments } = await import('@tosspayments/payment-sdk')
       const tossPayments = await loadTossPayments(process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY!)
       await tossPayments.requestBillingAuth('카드', {
         customerKey: crypto.randomUUID(),
