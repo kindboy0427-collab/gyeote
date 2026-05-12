@@ -1,61 +1,516 @@
+import Link from 'next/link'
 import { getServerSession } from 'next-auth'
-import { authOptions } from '../../src/lib/auth'
 import { redirect } from 'next/navigation'
-import { prisma } from '../../src/lib/prisma'
+import { authOptions } from '../../src/lib/auth'
+import { prisma } from '@/lib/prisma'
+import CancelSubscriptionButton from './CancelSubscriptionButton'
+
+function formatDate(date: Date | string | null | undefined) {
+  if (!date) {
+    return '-'
+  }
+
+  return new Date(date).toLocaleDateString('ko-KR')
+}
+
+function formatDateTime(date: Date | string | null | undefined) {
+  if (!date) {
+    return '-'
+  }
+
+  return new Date(date).toLocaleString('ko-KR')
+}
+
+function getPlanLabel(plan: string | null | undefined) {
+  const normalizedPlan = plan?.toLowerCase()
+
+  if (normalizedPlan === 'yearly') {
+    return '연간 구독'
+  }
+
+  if (normalizedPlan === 'monthly') {
+    return '월간 구독'
+  }
+
+  return '구독'
+}
+
+function getProviderLabel(provider: string | null | undefined) {
+  if (provider === 'KAKAO_PAY') {
+    return '카카오페이'
+  }
+
+  if (provider === 'TOSS') {
+    return '토스페이먼츠'
+  }
+
+  return '결제수단'
+}
+
+function getStatusLabel(status: string | null | undefined) {
+  if (status === 'active') {
+    return '활성'
+  }
+
+  if (status === 'failed') {
+    return '결제 실패'
+  }
+
+  if (status === 'canceled') {
+    return '해지됨'
+  }
+
+  if (status === 'pending') {
+    return '결제 대기'
+  }
+
+  return '알 수 없음'
+}
+
+function getStatusClass(status: string | null | undefined) {
+  if (status === 'active') {
+    return 'bg-green-100 text-green-700'
+  }
+
+  if (status === 'failed') {
+    return 'bg-red-100 text-red-700'
+  }
+
+  if (status === 'canceled') {
+    return 'bg-gray-100 text-gray-600'
+  }
+
+  return 'bg-yellow-100 text-yellow-700'
+}
 
 export default async function Dashboard() {
   const session = await getServerSession(authOptions)
-  if (!session) redirect('/login')
 
-  const kakaoId = (session?.user as any)?.id
+  if (!session) {
+    redirect('/login')
+  }
+
+  const kakaoId = (session.user as { id?: string })?.id
+
   const user = await prisma.user.findFirst({
     where: {
       OR: [
         { email: `kakao_${kakaoId}@gyeote.com` },
         { email: session.user?.email ?? '' },
-      ]
+      ],
     },
-    include: { parents: true },
+    include: {
+      parents: true,
+      subscriptions: true,
+    },
   })
+
   const parents = user?.parents ?? []
+
+  const subscriptions = [...(user?.subscriptions ?? [])].sort((a, b) => {
+    const aBaseDate = a.updatedAt ?? a.lastPaidAt ?? a.nextBillingAt ?? a.createdAt
+    const bBaseDate = b.updatedAt ?? b.lastPaidAt ?? b.nextBillingAt ?? b.createdAt
+
+    return new Date(bBaseDate).getTime() - new Date(aBaseDate).getTime()
+  })
+
+  const activeSubscription = subscriptions.find(
+    (subscription) => subscription.status === 'active'
+  )
+
+  const failedSubscription = subscriptions.find(
+    (subscription) => subscription.status === 'failed'
+  )
+
+  const canceledSubscriptions = subscriptions.filter(
+    (subscription) => subscription.status === 'canceled'
+  )
+
+  const latestSubscription = subscriptions[0]
+
+  const headerButtonLabel = activeSubscription ? '구독 관리' : '구독하기'
 
   return (
     <main className="min-h-screen bg-gray-50">
       <header className="bg-white border-b px-6 py-4 flex items-center justify-between">
         <h1 className="text-xl font-bold text-green-600">곁에</h1>
+
         <div className="flex items-center gap-3">
-          <span className="text-sm text-gray-500">{session.user?.name ?? '사용자'}님</span>
+          <Link
+            href="/payment"
+            className="bg-yellow-400 text-gray-800 px-4 py-2 rounded-full text-sm font-bold"
+          >
+            {headerButtonLabel}
+          </Link>
+
+          <span className="text-sm text-gray-500">
+            {session.user?.name ?? '사용자'}님
+          </span>
+
           <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center text-sm font-bold text-green-600">
             {session.user?.name?.[0] ?? 'U'}
           </div>
         </div>
       </header>
 
-      <div className="max-w-2xl mx-auto px-4 py-6">
-        {parents.length === 0 ? (
-          <div className="bg-white rounded-2xl p-8 text-center shadow-sm mb-6">
-            <div className="text-5xl mb-4">👴</div>
-            <h2 className="text-xl font-bold text-gray-800 mb-2">부모님을 등록해보세요</h2>
-            <p className="text-gray-500 text-sm mb-6">부모님 전화번호를 등록하면 매일 아침 카카오로 안부를 드려요.</p>
-            <a href="/onboard" className="bg-green-500 text-white px-6 py-3 rounded-xl font-medium inline-block">부모님 등록하기</a>
-          </div>
-        ) : (
-          <div className="mb-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold text-gray-800">등록된 부모님</h2>
-              <a href="/onboard" className="text-sm text-green-600 font-medium">+ 추가</a>
+      <div className="max-w-5xl mx-auto px-4 py-6">
+        <section className="mb-6">
+          <div className="flex items-end justify-between gap-3 mb-4">
+            <div>
+              <h2 className="text-xl font-bold text-gray-900">구독 관리</h2>
+              <p className="text-sm text-gray-500 mt-1">
+                활성 구독, 결제 실패, 해지된 구독을 최신순으로 확인합니다.
+              </p>
             </div>
-            {parents.map((p) => (
-              <div key={p.id} className="bg-white rounded-xl p-4 shadow-sm mb-3 flex items-center gap-4">
-                <div className="text-3xl">👴</div>
-                <div>
-                  <div className="font-medium text-gray-800">{p.name}</div>
-                  <div className="text-sm text-gray-500">{p.phone} · 아침 {p.morningTime}</div>
+
+            <Link
+              href="/payment"
+              className="shrink-0 bg-yellow-400 text-gray-800 px-4 py-2 rounded-xl text-sm font-bold"
+            >
+              결제 페이지로 이동
+            </Link>
+          </div>
+
+          {activeSubscription && (
+            <div className="bg-green-50 border border-green-200 rounded-2xl p-5 mb-4">
+              <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+                <div className="w-full">
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="w-6 h-6 rounded-full bg-green-500 text-white flex items-center justify-center text-xs">
+                      ✓
+                    </span>
+                    <p className="text-base font-bold text-green-800">
+                      활성 구독
+                    </p>
+                    <span className="bg-green-100 text-green-700 px-2 py-1 rounded-full text-xs font-bold">
+                      active
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                    <div>
+                      <p className="text-xs text-green-700/70">플랜</p>
+                      <p className="font-bold text-gray-900 mt-1">
+                        {getPlanLabel(activeSubscription.plan)}
+                      </p>
+                    </div>
+
+                    <div>
+                      <p className="text-xs text-green-700/70">결제 수단</p>
+                      <p className="font-bold text-gray-900 mt-1">
+                        {getProviderLabel(activeSubscription.provider)}
+                      </p>
+                    </div>
+
+                    <div>
+                      <p className="text-xs text-green-700/70">금액</p>
+                      <p className="font-bold text-gray-900 mt-1">
+                        {activeSubscription.price.toLocaleString('ko-KR')}원
+                      </p>
+                    </div>
+
+                    <div>
+                      <p className="text-xs text-green-700/70">
+                        다음 결제 예정일
+                      </p>
+                      <p className="font-bold text-gray-900 mt-1">
+                        {formatDate(activeSubscription.nextBillingAt)}
+                      </p>
+                    </div>
+                  </div>
+
+                  <p className="text-xs text-green-700 mt-4">
+                    자동 결제가 활성화되어 있습니다. 직접 해지하기 전까지
+                    구독이 유지됩니다.
+                  </p>
+                </div>
+
+                <div className="shrink-0">
+                  <CancelSubscriptionButton />
                 </div>
               </div>
-            ))}
-          </div>
-        )}
+            </div>
+          )}
+
+          {failedSubscription && (
+            <div className="bg-red-50 border border-red-200 rounded-2xl p-5 mb-4">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div className="w-full">
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="w-6 h-6 rounded-full bg-red-500 text-white flex items-center justify-center text-xs">
+                      !
+                    </span>
+                    <p className="text-base font-bold text-red-700">
+                      결제 실패
+                    </p>
+                    <span className="bg-red-100 text-red-700 px-2 py-1 rounded-full text-xs font-bold">
+                      failed
+                    </span>
+                  </div>
+
+                  <p className="text-sm text-red-700 mb-4">
+                    최근 자동 결제에 실패했습니다. 결제 수단을 확인해 주세요.
+                  </p>
+
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                    <div>
+                      <p className="text-xs text-red-700/70">플랜</p>
+                      <p className="font-bold text-gray-900 mt-1">
+                        {getPlanLabel(failedSubscription.plan)}
+                      </p>
+                    </div>
+
+                    <div>
+                      <p className="text-xs text-red-700/70">결제 수단</p>
+                      <p className="font-bold text-gray-900 mt-1">
+                        {getProviderLabel(failedSubscription.provider)}
+                      </p>
+                    </div>
+
+                    <div>
+                      <p className="text-xs text-red-700/70">금액</p>
+                      <p className="font-bold text-gray-900 mt-1">
+                        {failedSubscription.price.toLocaleString('ko-KR')}원
+                      </p>
+                    </div>
+
+                    <div>
+                      <p className="text-xs text-red-700/70">실패 확인일</p>
+                      <p className="font-bold text-gray-900 mt-1">
+                        {formatDateTime(failedSubscription.updatedAt)}
+                      </p>
+                    </div>
+                  </div>
+
+                  <p className="text-xs text-red-600 mt-4">
+                    다시 결제하면 구독이 즉시 활성화되고 서비스 이용이
+                    계속됩니다.
+                  </p>
+                </div>
+
+                <Link
+                  href="/payment"
+                  className="shrink-0 bg-red-500 text-white px-5 py-3 rounded-xl text-sm font-bold text-center"
+                >
+                  다시 결제하기
+                </Link>
+              </div>
+            </div>
+          )}
+
+          {!activeSubscription &&
+            !failedSubscription &&
+            latestSubscription?.status !== 'canceled' && (
+              <div className="bg-yellow-50 border border-yellow-100 rounded-2xl p-5 mb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div>
+                  <p className="text-sm font-bold text-gray-800">
+                    아직 구독이 활성화되지 않았습니다.
+                  </p>
+
+                  <p className="text-xs text-gray-500 mt-1">
+                    월 4,900원 또는 연 50,000원으로 부모님 안부 확인을
+                    시작하세요.
+                  </p>
+                </div>
+
+                <Link
+                  href="/payment"
+                  className="shrink-0 bg-yellow-400 text-gray-800 px-4 py-2 rounded-xl text-sm font-bold text-center"
+                >
+                  결제하기
+                </Link>
+              </div>
+            )}
+
+          {canceledSubscriptions.length > 0 && (
+            <div className="bg-white border border-gray-200 rounded-2xl p-5 mb-4">
+              <div className="flex items-center gap-2 mb-4">
+                <span className="w-6 h-6 rounded-full bg-gray-300 text-white flex items-center justify-center text-xs">
+                  ×
+                </span>
+                <p className="text-base font-bold text-gray-800">
+                  해지된 구독
+                </p>
+                <span className="bg-gray-100 text-gray-600 px-2 py-1 rounded-full text-xs font-bold">
+                  canceled
+                </span>
+              </div>
+
+              <div className="divide-y divide-gray-100">
+                {canceledSubscriptions.map((subscription) => (
+                  <div
+                    key={subscription.id}
+                    className="py-3 grid grid-cols-2 md:grid-cols-5 gap-3 text-sm"
+                  >
+                    <div>
+                      <p className="text-xs text-gray-400">플랜</p>
+                      <p className="font-medium text-gray-800">
+                        {getPlanLabel(subscription.plan)}
+                      </p>
+                    </div>
+
+                    <div>
+                      <p className="text-xs text-gray-400">결제 수단</p>
+                      <p className="font-medium text-gray-800">
+                        {getProviderLabel(subscription.provider)}
+                      </p>
+                    </div>
+
+                    <div>
+                      <p className="text-xs text-gray-400">금액</p>
+                      <p className="font-medium text-gray-800">
+                        {subscription.price.toLocaleString('ko-KR')}원
+                      </p>
+                    </div>
+
+                    <div>
+                      <p className="text-xs text-gray-400">해지일</p>
+                      <p className="font-medium text-gray-800">
+                        {formatDate(subscription.canceledAt)}
+                      </p>
+                    </div>
+
+                    <div className="flex items-end md:justify-end">
+                      <Link
+                        href="/payment"
+                        className="text-sm text-green-600 font-bold"
+                      >
+                        다시 구독하기
+                      </Link>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {subscriptions.length > 0 && (
+            <div className="bg-white border border-gray-200 rounded-2xl p-5">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <p className="text-base font-bold text-gray-900">
+                    구독 이력
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    최신순으로 정렬되어 있습니다.
+                  </p>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-left text-xs text-gray-400 border-b">
+                      <th className="py-2 pr-4">상태</th>
+                      <th className="py-2 pr-4">플랜</th>
+                      <th className="py-2 pr-4">결제 수단</th>
+                      <th className="py-2 pr-4">금액</th>
+                      <th className="py-2 pr-4">다음 결제일</th>
+                      <th className="py-2 pr-4">수정일</th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                    {subscriptions.map((subscription) => (
+                      <tr
+                        key={subscription.id}
+                        className="border-b last:border-b-0"
+                      >
+                        <td className="py-3 pr-4">
+                          <span
+                            className={`px-2 py-1 rounded-full text-xs font-bold ${getStatusClass(
+                              subscription.status
+                            )}`}
+                          >
+                            {getStatusLabel(subscription.status)}
+                          </span>
+                        </td>
+
+                        <td className="py-3 pr-4 text-gray-800">
+                          {getPlanLabel(subscription.plan)}
+                        </td>
+
+                        <td className="py-3 pr-4 text-gray-800">
+                          {getProviderLabel(subscription.provider)}
+                        </td>
+
+                        <td className="py-3 pr-4 text-gray-800">
+                          {subscription.price.toLocaleString('ko-KR')}원
+                        </td>
+
+                        <td className="py-3 pr-4 text-gray-800">
+                          {formatDate(subscription.nextBillingAt)}
+                        </td>
+
+                        <td className="py-3 pr-4 text-gray-500">
+                          {formatDate(subscription.updatedAt)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </section>
+
+        <section>
+          {parents.length === 0 ? (
+            <div className="bg-white rounded-2xl p-8 text-center shadow-sm mb-6">
+              <div className="text-5xl mb-4">👪</div>
+
+              <h2 className="text-xl font-bold text-gray-800 mb-2">
+                부모님을 등록해보세요
+              </h2>
+
+              <p className="text-gray-500 text-sm mb-6">
+                부모님 전화번호와 안부 확인 시간을 등록하면 매일 아침 안부
+                확인을 시작할 수 있습니다.
+              </p>
+
+              <Link
+                href="/onboard"
+                className="bg-green-500 text-white px-6 py-3 rounded-xl font-medium inline-block"
+              >
+                부모님 등록하기
+              </Link>
+            </div>
+          ) : (
+            <div className="mb-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-bold text-gray-800">
+                  등록된 부모님
+                </h2>
+
+                <Link
+                  href="/onboard"
+                  className="text-sm text-green-600 font-medium"
+                >
+                  + 추가
+                </Link>
+              </div>
+
+              {parents.map((parent) => (
+                <div
+                  key={parent.id}
+                  className="bg-white rounded-xl p-4 shadow-sm mb-3 flex items-center gap-4"
+                >
+                  <div className="text-3xl">👪</div>
+
+                  <div>
+                    <div className="font-medium text-gray-800">
+                      {parent.name}
+                    </div>
+
+                    <div className="text-sm text-gray-500">
+                      {parent.phone} · 아침 {parent.morningTime}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
       </div>
     </main>
   )
