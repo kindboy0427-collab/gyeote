@@ -64,7 +64,7 @@ model Report {
 
 model Subscription {
   id            String   @id @default(cuid())
-  userId        String
+  userId        String   @unique
   user          User     @relation(fields: [userId], references: [id])
   plan          String   @default("care")
   price         Int      @default(5900)
