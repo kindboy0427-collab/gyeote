@@ -5,6 +5,15 @@ import { authOptions } from '../../src/lib/auth'
 import { prisma } from '@/lib/prisma'
 import CancelSubscriptionButton from './CancelSubscriptionButton'
 
+const REPLY_LIMIT_HOURS = 2
+
+type TodayResponse = {
+  responded: boolean
+  respondedAt: Date | null
+  message: string | null
+  date: Date
+}
+
 function formatDate(date: Date | string | null | undefined) {
   if (!date) {
     return '-'
@@ -19,6 +28,21 @@ function formatDateTime(date: Date | string | null | undefined) {
   }
 
   return new Date(date).toLocaleString('ko-KR')
+}
+
+function getTodayRange() {
+  const now = new Date()
+
+  const start = new Date(now)
+  start.setHours(0, 0, 0, 0)
+
+  const end = new Date(now)
+  end.setHours(23, 59, 59, 999)
+
+  return {
+    start,
+    end,
+  }
 }
 
 function getPlanLabel(plan: string | null | undefined) {
@@ -83,6 +107,64 @@ function getStatusClass(status: string | null | undefined) {
   return 'bg-yellow-100 text-yellow-700'
 }
 
+function getReplyDeadline(response: TodayResponse | null | undefined) {
+  if (!response) {
+    return null
+  }
+
+  return new Date(
+    new Date(response.date).getTime() + REPLY_LIMIT_HOURS * 60 * 60 * 1000
+  )
+}
+
+function getReplyStatus(response: TodayResponse | null | undefined) {
+  const now = new Date()
+
+  if (!response) {
+    return {
+      label: '미응답',
+      className: 'bg-gray-100 text-gray-600',
+      description: '오늘 안부 기록이 아직 없습니다.',
+    }
+  }
+
+  const deadline = getReplyDeadline(response)
+
+  if (response.responded) {
+    const respondedAt = response.respondedAt
+      ? new Date(response.respondedAt)
+      : null
+
+    if (deadline && respondedAt && respondedAt.getTime() > deadline.getTime()) {
+      return {
+        label: '지연 답장',
+        className: 'bg-orange-100 text-orange-700',
+        description: '2시간 이후 답장했습니다.',
+      }
+    }
+
+    return {
+      label: '답장 완료',
+      className: 'bg-green-100 text-green-700',
+      description: '2시간 이내 답장했습니다.',
+    }
+  }
+
+  if (deadline && now.getTime() > deadline.getTime()) {
+    return {
+      label: '보호자 알림 필요',
+      className: 'bg-red-100 text-red-700',
+      description: '안부 생성 후 2시간 동안 답장이 없습니다.',
+    }
+  }
+
+  return {
+    label: '미응답',
+    className: 'bg-yellow-100 text-yellow-700',
+    description: '아직 답장을 기다리는 중입니다.',
+  }
+}
+
 export default async function Dashboard() {
   const session = await getServerSession(authOptions)
 
@@ -91,6 +173,7 @@ export default async function Dashboard() {
   }
 
   const kakaoId = (session.user as { id?: string })?.id
+  const { start, end } = getTodayRange()
 
   const user = await prisma.user.findFirst({
     where: {
@@ -100,7 +183,23 @@ export default async function Dashboard() {
       ],
     },
     include: {
-      parents: true,
+      parents: {
+        include: {
+          responses: {
+            where: {
+              type: 'morning',
+              date: {
+                gte: start,
+                lte: end,
+              },
+            },
+            orderBy: {
+              date: 'desc',
+            },
+            take: 1,
+          },
+        },
+      },
       subscriptions: true,
     },
   })
@@ -490,24 +589,76 @@ export default async function Dashboard() {
                 </Link>
               </div>
 
-              {parents.map((parent) => (
-                <div
-                  key={parent.id}
-                  className="bg-white rounded-xl p-4 shadow-sm mb-3 flex items-center gap-4"
-                >
-                  <div className="text-3xl">👪</div>
+              {parents.map((parent) => {
+                const todayResponse = parent.responses[0]
+                const replyStatus = getReplyStatus(todayResponse)
+                const replyDeadline = getReplyDeadline(todayResponse)
 
-                  <div>
-                    <div className="font-medium text-gray-800">
-                      {parent.name}
-                    </div>
+                return (
+                  <div
+                    key={parent.id}
+                    className="bg-white rounded-xl p-4 shadow-sm mb-3"
+                  >
+                    <div className="flex items-start gap-4">
+                      <div className="text-3xl">👪</div>
 
-                    <div className="text-sm text-gray-500">
-                      {parent.phone} · 아침 {parent.morningTime}
+                      <div className="w-full">
+                        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+                          <div>
+                            <div className="font-medium text-gray-800">
+                              {parent.name}
+                            </div>
+
+                            <div className="text-sm text-gray-500">
+                              {parent.phone} · 아침 {parent.morningTime}
+                            </div>
+                          </div>
+
+                          <span
+                            className={`w-fit px-3 py-1 rounded-full text-xs font-bold ${replyStatus.className}`}
+                          >
+                            {replyStatus.label}
+                          </span>
+                        </div>
+
+                        <p className="text-xs text-gray-500 mt-2">
+                          {replyStatus.description}
+                        </p>
+
+                        <div className="mt-3 grid grid-cols-1 md:grid-cols-4 gap-3 text-sm">
+                          <div className="bg-gray-50 rounded-xl p-3">
+                            <p className="text-xs text-gray-400">오늘 답장</p>
+                            <p className="font-medium text-gray-800 mt-1">
+                              {todayResponse?.message ?? '-'}
+                            </p>
+                          </div>
+
+                          <div className="bg-gray-50 rounded-xl p-3">
+                            <p className="text-xs text-gray-400">답장 시간</p>
+                            <p className="font-medium text-gray-800 mt-1">
+                              {formatDateTime(todayResponse?.respondedAt)}
+                            </p>
+                          </div>
+
+                          <div className="bg-gray-50 rounded-xl p-3">
+                            <p className="text-xs text-gray-400">안부 생성일</p>
+                            <p className="font-medium text-gray-800 mt-1">
+                              {formatDateTime(todayResponse?.date)}
+                            </p>
+                          </div>
+
+                          <div className="bg-gray-50 rounded-xl p-3">
+                            <p className="text-xs text-gray-400">보호자 알림 기준</p>
+                            <p className="font-medium text-gray-800 mt-1">
+                              {formatDateTime(replyDeadline)}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           )}
         </section>

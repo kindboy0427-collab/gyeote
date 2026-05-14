@@ -8,6 +8,17 @@ import {
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
+const KST_TIME_ZONE = 'Asia/Seoul'
+const GLOBAL_SEND_START_HHMM = '09:00'
+const GLOBAL_SEND_END_HHMM = '10:00'
+
+type CronResultStatus =
+  | 'sent'
+  | 'failed'
+  | 'skipped'
+  | 'already_exists'
+  | 'blocked_by_global_time_window'
+
 function getBearerToken(request: NextRequest) {
   const authHeader = request.headers.get('authorization')
 
@@ -34,14 +45,51 @@ function isCronAuthorized(request: NextRequest) {
   return token === cronSecret
 }
 
-function getTodayRange() {
-  const now = new Date()
+function getKstParts(date = new Date()) {
+  const formatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone: KST_TIME_ZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hourCycle: 'h23',
+  })
 
-  const start = new Date(now)
-  start.setHours(0, 0, 0, 0)
+  const parts = formatter.formatToParts(date)
+  const values = Object.fromEntries(
+    parts
+      .filter((part) => part.type !== 'literal')
+      .map((part) => [part.type, part.value])
+  )
 
-  const end = new Date(now)
-  end.setHours(23, 59, 59, 999)
+  return {
+    year: values.year,
+    month: values.month,
+    day: values.day,
+    hour: values.hour,
+    minute: values.minute,
+    second: values.second,
+  }
+}
+
+function getCurrentKstHHmm() {
+  const parts = getKstParts()
+
+  return `${parts.hour}:${parts.minute}`
+}
+
+function getTodayKstRange() {
+  const parts = getKstParts()
+
+  const start = new Date(
+    `${parts.year}-${parts.month}-${parts.day}T00:00:00.000+09:00`
+  )
+
+  const end = new Date(
+    `${parts.year}-${parts.month}-${parts.day}T23:59:59.999+09:00`
+  )
 
   return {
     start,
@@ -49,43 +97,30 @@ function getTodayRange() {
   }
 }
 
-function getCurrentHHmm() {
-  const now = new Date()
+function hhmmToMinutes(hhmm: string) {
+  const [hour, minute] = hhmm.split(':').map((value) => Number(value))
 
-  const hours = String(now.getHours()).padStart(2, '0')
-  const minutes = String(now.getMinutes()).padStart(2, '0')
+  if (Number.isNaN(hour) || Number.isNaN(minute)) {
+    return null
+  }
 
-  return `${hours}:${minutes}`
+  return hour * 60 + minute
 }
 
-function isWithinMorningWindow(parentMorningTime: string, currentHHmm: string) {
-  if (!parentMorningTime) {
-    return true
-  }
-
-  const [targetHour, targetMinute] = parentMorningTime
-    .split(':')
-    .map((value) => Number(value))
-
-  const [currentHour, currentMinute] = currentHHmm
-    .split(':')
-    .map((value) => Number(value))
+function isWithinGlobalKstSendWindow(currentHHmm: string) {
+  const currentMinutes = hhmmToMinutes(currentHHmm)
+  const startMinutes = hhmmToMinutes(GLOBAL_SEND_START_HHMM)
+  const endMinutes = hhmmToMinutes(GLOBAL_SEND_END_HHMM)
 
   if (
-    Number.isNaN(targetHour) ||
-    Number.isNaN(targetMinute) ||
-    Number.isNaN(currentHour) ||
-    Number.isNaN(currentMinute)
+    currentMinutes === null ||
+    startMinutes === null ||
+    endMinutes === null
   ) {
-    return true
+    return false
   }
 
-  const targetTotalMinutes = targetHour * 60 + targetMinute
-  const currentTotalMinutes = currentHour * 60 + currentMinute
-
-  const diff = Math.abs(currentTotalMinutes - targetTotalMinutes)
-
-  return diff <= 90
+  return currentMinutes >= startMinutes && currentMinutes <= endMinutes
 }
 
 function getLogStatus(statusText: 'sent' | 'failed' | 'skipped') {
@@ -112,8 +147,35 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    const { start, end } = getTodayRange()
-    const currentHHmm = getCurrentHHmm()
+    const { start, end } = getTodayKstRange()
+    const currentKstHHmm = getCurrentKstHHmm()
+
+    if (!isWithinGlobalKstSendWindow(currentKstHHmm)) {
+      return NextResponse.json({
+        ok: true,
+        blocked: true,
+        checkedAt: new Date().toISOString(),
+        timezone: KST_TIME_ZONE,
+        currentKstHHmm,
+        allowedWindow: `${GLOBAL_SEND_START_HHMM}~${GLOBAL_SEND_END_HHMM}`,
+        message:
+          '한국시간 09:00~10:00 밖이므로 최초 안부 생성과 알림톡 발송을 차단했습니다.',
+        summary: {
+          totalParents: 0,
+          sent: 0,
+          failed: 0,
+          skipped: 0,
+          alreadyExists: 0,
+          blockedByGlobalTimeWindow: 1,
+        },
+        results: [
+          {
+            status: 'blocked_by_global_time_window',
+            reason: `현재 한국시간 ${currentKstHHmm}, 허용 시간 ${GLOBAL_SEND_START_HHMM}~${GLOBAL_SEND_END_HHMM}`,
+          },
+        ],
+      })
+    }
 
     const parents = await prisma.parent.findMany({
       where: {
@@ -160,24 +222,12 @@ export async function GET(request: NextRequest) {
       parentId: string
       parentName: string
       phone: string
-      status: 'sent' | 'failed' | 'skipped' | 'already_exists' | 'outside_time_window'
+      status: CronResultStatus
       reason?: string
       error?: string
     }> = []
 
     for (const parent of parents) {
-      if (!isWithinMorningWindow(parent.morningTime, currentHHmm)) {
-        results.push({
-          parentId: parent.id,
-          parentName: parent.name,
-          phone: parent.phone,
-          status: 'outside_time_window',
-          reason: `현재 시간 ${currentHHmm}, 설정 시간 ${parent.morningTime}`,
-        })
-
-        continue
-      }
-
       const alreadyCreated = parent.responses.length > 0
 
       if (alreadyCreated) {
@@ -218,12 +268,13 @@ export async function GET(request: NextRequest) {
           channel: 'KAKAO_ALIMTALK',
           status: logStatus,
           message,
-          error:
-            alimtalkResult.reason ??
-            alimtalkResult.error ??
-            null,
+          error: alimtalkResult.reason ?? alimtalkResult.error ?? null,
           rawData: {
+            kind: 'MORNING_INITIAL',
             responseId: response.id,
+            timezone: KST_TIME_ZONE,
+            currentKstHHmm,
+            allowedWindow: `${GLOBAL_SEND_START_HHMM}~${GLOBAL_SEND_END_HHMM}`,
             status: alimtalkResult.status,
             statusText: alimtalkResult.statusText,
             success: alimtalkResult.success,
@@ -275,15 +326,17 @@ export async function GET(request: NextRequest) {
       alreadyExists: results.filter(
         (result) => result.status === 'already_exists'
       ).length,
-      outsideTimeWindow: results.filter(
-        (result) => result.status === 'outside_time_window'
+      blockedByGlobalTimeWindow: results.filter(
+        (result) => result.status === 'blocked_by_global_time_window'
       ).length,
     }
 
     return NextResponse.json({
       ok: true,
       checkedAt: new Date().toISOString(),
-      currentHHmm,
+      timezone: KST_TIME_ZONE,
+      currentKstHHmm,
+      allowedWindow: `${GLOBAL_SEND_START_HHMM}~${GLOBAL_SEND_END_HHMM}`,
       summary,
       results,
     })
