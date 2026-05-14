@@ -3,7 +3,6 @@ import Link from 'next/link'
 export default function Home() {
   return (
     <main className="min-h-screen bg-white">
-      {/* 헤더 */}
       <header className="flex items-center justify-between px-6 py-4 border-b">
         <h1 className="text-xl font-bold text-green-600">곁에</h1>
         <Link href="/login" className="bg-green-500 text-white px-4 py-2 rounded-full text-sm font-semibold">
@@ -11,7 +10,6 @@ export default function Home() {
         </Link>
       </header>
 
-      {/* 히어로 섹션 */}
       <section className="flex flex-col items-center justify-center text-center px-6 py-28 bg-gradient-to-b from-white to-green-50">
         <span className="bg-green-100 text-green-700 text-xs font-bold px-3 py-1 rounded-full mb-6">
           매일 아침 카카오톡으로 자동 안부 확인
@@ -32,26 +30,13 @@ export default function Home() {
         <p className="text-sm text-gray-400 mt-4">월 4,900원 · 언제든 해지 가능</p>
       </section>
 
-      {/* 기능 카드 */}
       <section className="px-6 py-16 bg-gray-50">
         <h3 className="text-center text-2xl font-bold text-gray-800 mb-10">이런 분들께 딱 맞아요</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
           {[
-            {
-              emoji: '💬',
-              title: '매일 아침 안부',
-              desc: '카카오톡으로 자연스럽게 안부를 묻고 대화해요. 부모님이 익숙한 채널 그대로 사용해요.',
-            },
-            {
-              emoji: '📊',
-              title: '주간·월간 리포트',
-              desc: 'AI가 한 주 대화를 분석해서 자녀에게 리포트로 전달해요. 멀리 있어도 안심돼요.',
-            },
-            {
-              emoji: '🚨',
-              title: '이상 감지 알림',
-              desc: '2시간 안에 응답이 없으면 자녀에게 즉시 푸시 알림을 보내드려요.',
-            },
+            { emoji: '💬', title: '매일 아침 안부', desc: '카카오톡으로 자연스럽게 안부를 묻고 대화해요. 부모님이 익숙한 채널 그대로 사용해요.' },
+            { emoji: '📊', title: '주간·월간 리포트', desc: 'AI가 한 주 대화를 분석해서 자녀에게 리포트로 전달해요. 멀리 있어도 안심돼요.' },
+            { emoji: '🚨', title: '이상 감지 알림', desc: '2시간 안에 응답이 없으면 자녀에게 즉시 푸시 알림을 보내드려요.' },
           ].map((f, i) => (
             <div key={i} className="bg-white rounded-2xl p-7 text-center shadow-sm hover:shadow-md transition-shadow">
               <div className="text-4xl mb-4">{f.emoji}</div>
@@ -62,7 +47,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 사용 방법 */}
       <section className="px-6 py-16 bg-white">
         <h3 className="text-center text-2xl font-bold text-gray-800 mb-12">시작하기까지 3분이면 충분해요</h3>
         <div className="flex flex-col md:flex-row items-center justify-center gap-6 max-w-3xl mx-auto">
@@ -82,7 +66,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* CTA */}
       <section className="px-6 py-20 bg-green-500 text-center">
         <h3 className="text-2xl md:text-3xl font-bold text-white mb-4">
           오늘부터 부모님 곁에 있어드리세요
@@ -96,10 +79,13 @@ export default function Home() {
         </Link>
       </section>
 
-      {/* 푸터 */}
       <footer className="text-center py-6 text-xs text-gray-400 border-t">
         <p>© 2026 에브리홈 | 사업자등록번호: 592-28-02229</p>
         <p className="mt-1">곁에(gyeote) 서비스는 에브리홈이 운영합니다.</p>
+        <div className="flex justify-center gap-4 mt-2">
+          <a href="/terms" className="hover:text-gray-600">이용약관</a>
+          <a href="/privacy" className="hover:text-gray-600">개인정보처리방침</a>
+        </div>
       </footer>
     </main>
   )
