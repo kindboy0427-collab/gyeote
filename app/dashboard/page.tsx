@@ -7,6 +7,7 @@ import CancelSubscriptionButton from './CancelSubscriptionButton'
 import DeleteParentButton from './DeleteParentButton'
 import LogoutButton from './LogoutButton'
 import PushInit from '../components/PushInit'
+import StartTrialButton from './StartTrialButton'
 
 const REPLY_LIMIT_HOURS = 2
 
@@ -178,7 +179,7 @@ export default async function Dashboard() {
       </header>
 
       <div className="max-w-5xl mx-auto px-4 py-6">
-        {/* 무료 체험 배너 */}
+        {/* 무료 체험 진행 중 배너 */}
         {isTrial && (
           <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
             <div>
@@ -339,11 +340,9 @@ export default async function Dashboard() {
           {parents.length === 0 ? (
             <>
               {!activeSubscription && (
-                <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 mb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-bold text-blue-800">🎉 무료 체험 30일 가능</p>
-                    <p className="text-xs text-blue-600 mt-1">부모님을 등록하면 30일 무료 체험이 자동으로 시작돼요.</p>
-                  </div>
+                <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 mb-4">
+                  <p className="text-sm font-bold text-blue-800">🎉 무료 체험 30일 가능</p>
+                  <p className="text-xs text-blue-600 mt-1">부모님을 등록하면 30일 무료 체험을 시작할 수 있어요.</p>
                 </div>
               )}
               <div className="bg-white rounded-2xl p-8 text-center shadow-sm mb-6">
@@ -361,6 +360,18 @@ export default async function Dashboard() {
                 <h2 className="text-lg font-bold text-gray-800">등록된 부모님</h2>
                 <Link href="/onboard" className="text-sm text-green-600 font-medium">+ 추가</Link>
               </div>
+
+              {/* 부모님 있고 구독 없을 때 trial 시작 버튼 */}
+              {!activeSubscription && (
+                <div className="bg-blue-50 border border-blue-200 rounded-2xl p-5 mb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-bold text-blue-800">🎉 30일 무료 체험을 시작해보세요</p>
+                    <p className="text-xs text-blue-600 mt-1">카드 없이 30일간 무료로 서비스를 이용할 수 있어요.</p>
+                  </div>
+                  <StartTrialButton />
+                </div>
+              )}
+
               {parents.map((parent) => {
                 const todayResponse = parent.responses[0]
                 const replyStatus = getReplyStatus(todayResponse)

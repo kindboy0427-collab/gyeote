@@ -33,27 +33,6 @@ export async function POST(req: NextRequest) {
       },
     })
 
-    // 첫 부모님 등록 시 trial 구독 자동 생성
-    const existingSub = await prisma.subscription.findFirst({
-      where: { userId: user.id },
-    })
-
-    if (!existingSub) {
-      const trialEnd = new Date()
-      trialEnd.setDate(trialEnd.getDate() + 30)
-
-      await prisma.subscription.create({
-        data: {
-          userId: user.id,
-          plan: 'monthly',
-          provider: 'TRIAL',
-          status: 'trial',
-          price: 0,
-          nextBillingAt: trialEnd,
-        },
-      })
-    }
-
     return NextResponse.json({ success: true, parent })
   } catch (e) {
     console.error('error:', e)
