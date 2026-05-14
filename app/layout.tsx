@@ -29,17 +29,6 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         {children}
-        <footer style={{
-          textAlign: 'center',
-          padding: '24px',
-          fontSize: '12px',
-          color: '#888',
-          borderTop: '1px solid #eee',
-          marginTop: '40px'
-        }}>
-          <p>© 2026 에브리홈 | 사업자등록번호: 592-28-02229</p>
-          <p style={{ marginTop: '4px' }}>곁에(gyeote) 서비스는 에브리홈이 운영합니다.</p>
-        </footer>
       </body>
     </html>
   );
