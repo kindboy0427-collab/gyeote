@@ -31,6 +31,13 @@ export async function DELETE(
 
   if (!parent) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
+  await prisma.response.deleteMany({ where: { parentId: id } })
+  await prisma.message.deleteMany({ where: { parentId: id } })
+  await prisma.report.deleteMany({ where: { parentId: id } })
+  await prisma.notificationLog.updateMany({
+    where: { parentId: id },
+    data: { parentId: null },
+  })
   await prisma.parent.delete({ where: { id } })
 
   return NextResponse.json({ ok: true })
