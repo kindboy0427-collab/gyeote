@@ -5,8 +5,10 @@ import { prisma } from '@/lib/prisma'
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params
+
   const session = await getServerSession(authOptions)
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
@@ -24,12 +26,12 @@ export async function DELETE(
   if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 })
 
   const parent = await prisma.parent.findFirst({
-    where: { id: params.id, userId: user.id },
+    where: { id, userId: user.id },
   })
 
   if (!parent) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-  await prisma.parent.delete({ where: { id: params.id } })
+  await prisma.parent.delete({ where: { id } })
 
   return NextResponse.json({ ok: true })
 }
