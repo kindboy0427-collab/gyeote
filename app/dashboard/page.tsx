@@ -73,7 +73,6 @@ function getReplyDeadline(response: TodayResponse | null | undefined) {
 
 function getReplyStatus(response: TodayResponse | null | undefined) {
   const now = new Date()
-
   if (!response) {
     return {
       label: '대기중',
@@ -81,9 +80,7 @@ function getReplyStatus(response: TodayResponse | null | undefined) {
       description: '오늘 아침 안부 기록이 아직 없습니다.',
     }
   }
-
   const deadline = getReplyDeadline(response)
-
   if (response.responded) {
     const respondedAt = response.respondedAt ? new Date(response.respondedAt) : null
     if (deadline && respondedAt && respondedAt.getTime() > deadline.getTime()) {
@@ -99,7 +96,6 @@ function getReplyStatus(response: TodayResponse | null | undefined) {
       description: '2시간 내에 응답했습니다.',
     }
   }
-
   if (deadline && now.getTime() > deadline.getTime()) {
     return {
       label: '보호자 알림 필요',
@@ -107,7 +103,6 @@ function getReplyStatus(response: TodayResponse | null | undefined) {
       description: '안부 생성 후 2시간 넘게 응답이 없습니다.',
     }
   }
-
   return {
     label: '대기중',
     className: 'bg-yellow-100 text-yellow-700',
@@ -158,7 +153,6 @@ export default async function Dashboard() {
     (s) => s.status === 'active' || s.status === 'trial'
   )
   const failedSubscription = subscriptions.find((s) => s.status === 'failed')
-  const canceledSubscriptions = subscriptions.filter((s) => s.status === 'canceled')
   const latestSubscription = subscriptions[0]
 
   const isTrial = activeSubscription?.status === 'trial'
@@ -343,14 +337,24 @@ export default async function Dashboard() {
 
         <section>
           {parents.length === 0 ? (
-            <div className="bg-white rounded-2xl p-8 text-center shadow-sm mb-6">
-              <div className="text-5xl mb-4">👨‍👩‍👧</div>
-              <h2 className="text-xl font-bold text-gray-800 mb-2">부모님을 등록해주세요</h2>
-              <p className="text-gray-500 text-sm mb-6">부모님 전화번호와 안부 확인 시간을 등록하면 매일 자동으로 안부 확인을 시작합니다.</p>
-              <Link href="/onboard" className="bg-green-500 text-white px-6 py-3 rounded-xl font-medium inline-block">
-                부모님 등록하기
-              </Link>
-            </div>
+            <>
+              {!activeSubscription && (
+                <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 mb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-bold text-blue-800">🎉 무료 체험 30일 가능</p>
+                    <p className="text-xs text-blue-600 mt-1">부모님을 등록하면 30일 무료 체험이 자동으로 시작돼요.</p>
+                  </div>
+                </div>
+              )}
+              <div className="bg-white rounded-2xl p-8 text-center shadow-sm mb-6">
+                <div className="text-5xl mb-4">👨‍👩‍👧</div>
+                <h2 className="text-xl font-bold text-gray-800 mb-2">부모님을 등록해주세요</h2>
+                <p className="text-gray-500 text-sm mb-6">부모님 전화번호와 안부 확인 시간을 등록하면 매일 자동으로 안부 확인을 시작합니다.</p>
+                <Link href="/onboard" className="bg-green-500 text-white px-6 py-3 rounded-xl font-medium inline-block">
+                  부모님 등록하기
+                </Link>
+              </div>
+            </>
           ) : (
             <div className="mb-6">
               <div className="flex items-center justify-between mb-4">
