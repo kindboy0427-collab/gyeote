@@ -45,11 +45,13 @@ function getPlanLabel(plan: string | null | undefined) {
 function getProviderLabel(provider: string | null | undefined) {
   if (provider === 'KAKAO_PAY') return '카카오페이'
   if (provider === 'TOSS') return '토스페이먼츠'
+  if (provider === 'TRIAL') return '무료 체험'
   return '결제수단'
 }
 
 function getStatusLabel(status: string | null | undefined) {
   if (status === 'active') return '활성'
+  if (status === 'trial') return '무료 체험 중'
   if (status === 'failed') return '결제 실패'
   if (status === 'canceled') return '해지'
   if (status === 'pending') return '결제 대기'
@@ -58,6 +60,7 @@ function getStatusLabel(status: string | null | undefined) {
 
 function getStatusClass(status: string | null | undefined) {
   if (status === 'active') return 'bg-green-100 text-green-700'
+  if (status === 'trial') return 'bg-blue-100 text-blue-700'
   if (status === 'failed') return 'bg-red-100 text-red-700'
   if (status === 'canceled') return 'bg-gray-100 text-gray-600'
   return 'bg-yellow-100 text-yellow-700'
@@ -151,10 +154,17 @@ export default async function Dashboard() {
     return new Date(bDate).getTime() - new Date(aDate).getTime()
   })
 
-  const activeSubscription = subscriptions.find((s) => s.status === 'active')
+  const activeSubscription = subscriptions.find(
+    (s) => s.status === 'active' || s.status === 'trial'
+  )
   const failedSubscription = subscriptions.find((s) => s.status === 'failed')
   const canceledSubscriptions = subscriptions.filter((s) => s.status === 'canceled')
   const latestSubscription = subscriptions[0]
+
+  const isTrial = activeSubscription?.status === 'trial'
+  const trialDaysLeft = isTrial && activeSubscription?.nextBillingAt
+    ? Math.max(0, Math.ceil((new Date(activeSubscription.nextBillingAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+    : 0
 
   return (
     <main className="min-h-screen bg-gray-50">
@@ -163,7 +173,7 @@ export default async function Dashboard() {
         <h1 className="text-xl font-bold text-green-600">곁에</h1>
         <div className="flex items-center gap-3">
           <Link href="/payment" className="bg-yellow-400 text-gray-800 px-4 py-2 rounded-full text-sm font-bold">
-            {activeSubscription ? '구독 관리' : '구독하기'}
+            {activeSubscription?.status === 'active' ? '구독 관리' : '구독하기'}
           </Link>
           <span className="text-sm text-gray-500">{session.user?.name ?? '사용자'}님</span>
           <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center text-sm font-bold text-green-600">
@@ -174,6 +184,19 @@ export default async function Dashboard() {
       </header>
 
       <div className="max-w-5xl mx-auto px-4 py-6">
+        {/* 무료 체험 배너 */}
+        {isTrial && (
+          <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            <div>
+              <p className="text-sm font-bold text-blue-800">🎉 무료 체험 중 — {trialDaysLeft}일 남았어요</p>
+              <p className="text-xs text-blue-600 mt-1">체험 기간이 끝나기 전에 구독하면 계속 이용할 수 있어요.</p>
+            </div>
+            <Link href="/payment" className="shrink-0 bg-blue-500 text-white px-4 py-2 rounded-xl text-sm font-bold text-center">
+              지금 구독하기
+            </Link>
+          </div>
+        )}
+
         <section className="mb-6">
           <div className="flex items-end justify-between gap-3 mb-4">
             <div>
@@ -186,36 +209,48 @@ export default async function Dashboard() {
           </div>
 
           {activeSubscription && (
-            <div className="bg-green-50 border border-green-200 rounded-2xl p-5 mb-4">
+            <div className={`border rounded-2xl p-5 mb-4 ${isTrial ? 'bg-blue-50 border-blue-200' : 'bg-green-50 border-green-200'}`}>
               <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
                 <div className="w-full">
                   <div className="flex items-center gap-2 mb-3">
-                    <span className="w-6 h-6 rounded-full bg-green-500 text-white flex items-center justify-center text-xs">✓</span>
-                    <p className="text-base font-bold text-green-800">활성 구독</p>
-                    <span className="bg-green-100 text-green-700 px-2 py-1 rounded-full text-xs font-bold">active</span>
+                    <span className={`w-6 h-6 rounded-full text-white flex items-center justify-center text-xs ${isTrial ? 'bg-blue-500' : 'bg-green-500'}`}>
+                      {isTrial ? '✦' : '✓'}
+                    </span>
+                    <p className={`text-base font-bold ${isTrial ? 'text-blue-800' : 'text-green-800'}`}>
+                      {isTrial ? '무료 체험 중' : '활성 구독'}
+                    </p>
+                    <span className={`px-2 py-1 rounded-full text-xs font-bold ${getStatusClass(activeSubscription.status)}`}>
+                      {getStatusLabel(activeSubscription.status)}
+                    </span>
                   </div>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                     <div>
-                      <p className="text-xs text-green-700/70">플랜</p>
+                      <p className={`text-xs ${isTrial ? 'text-blue-700/70' : 'text-green-700/70'}`}>플랜</p>
                       <p className="font-bold text-gray-900 mt-1">{getPlanLabel(activeSubscription.plan)}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-green-700/70">결제 수단</p>
+                      <p className={`text-xs ${isTrial ? 'text-blue-700/70' : 'text-green-700/70'}`}>결제 수단</p>
                       <p className="font-bold text-gray-900 mt-1">{getProviderLabel(activeSubscription.provider)}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-green-700/70">금액</p>
-                      <p className="font-bold text-gray-900 mt-1">{activeSubscription.price.toLocaleString('ko-KR')}원</p>
+                      <p className={`text-xs ${isTrial ? 'text-blue-700/70' : 'text-green-700/70'}`}>금액</p>
+                      <p className="font-bold text-gray-900 mt-1">
+                        {isTrial ? '무료' : `${activeSubscription.price.toLocaleString('ko-KR')}원`}
+                      </p>
                     </div>
                     <div>
-                      <p className="text-xs text-green-700/70">다음 결제 예정일</p>
+                      <p className={`text-xs ${isTrial ? 'text-blue-700/70' : 'text-green-700/70'}`}>
+                        {isTrial ? '체험 만료일' : '다음 결제 예정일'}
+                      </p>
                       <p className="font-bold text-gray-900 mt-1">{formatDate(activeSubscription.nextBillingAt)}</p>
                     </div>
                   </div>
                 </div>
-                <div className="shrink-0">
-                  <CancelSubscriptionButton />
-                </div>
+                {!isTrial && (
+                  <div className="shrink-0">
+                    <CancelSubscriptionButton />
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -292,7 +327,9 @@ export default async function Dashboard() {
                         </td>
                         <td className="py-3 pr-4 text-gray-800">{getPlanLabel(subscription.plan)}</td>
                         <td className="py-3 pr-4 text-gray-800">{getProviderLabel(subscription.provider)}</td>
-                        <td className="py-3 pr-4 text-gray-800">{subscription.price.toLocaleString('ko-KR')}원</td>
+                        <td className="py-3 pr-4 text-gray-800">
+                          {subscription.status === 'trial' ? '무료' : `${subscription.price.toLocaleString('ko-KR')}원`}
+                        </td>
                         <td className="py-3 pr-4 text-gray-800">{formatDate(subscription.nextBillingAt)}</td>
                         <td className="py-3 pr-4 text-gray-500">{formatDate(subscription.updatedAt)}</td>
                       </tr>
