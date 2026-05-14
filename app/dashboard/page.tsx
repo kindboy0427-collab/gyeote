@@ -6,6 +6,7 @@ import { prisma } from '@/lib/prisma'
 import CancelSubscriptionButton from './CancelSubscriptionButton'
 import DeleteParentButton from './DeleteParentButton'
 import LogoutButton from './LogoutButton'
+import PushInit from '../components/PushInit'
 
 const REPLY_LIMIT_HOURS = 2
 
@@ -157,6 +158,7 @@ export default async function Dashboard() {
 
   return (
     <main className="min-h-screen bg-gray-50">
+      <PushInit />
       <header className="bg-white border-b px-6 py-4 flex items-center justify-between">
         <h1 className="text-xl font-bold text-green-600">곁에</h1>
         <div className="flex items-center gap-3">
@@ -318,12 +320,10 @@ export default async function Dashboard() {
                 <h2 className="text-lg font-bold text-gray-800">등록된 부모님</h2>
                 <Link href="/onboard" className="text-sm text-green-600 font-medium">+ 추가</Link>
               </div>
-
               {parents.map((parent) => {
                 const todayResponse = parent.responses[0]
                 const replyStatus = getReplyStatus(todayResponse)
                 const replyDeadline = getReplyDeadline(todayResponse)
-
                 return (
                   <div key={parent.id} className="bg-white rounded-xl p-4 shadow-sm mb-3">
                     <div className="flex items-start gap-4">
