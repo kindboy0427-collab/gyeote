@@ -1,3 +1,5 @@
+import crypto from 'crypto'
+
 type AlimtalkPayload = {
   to: string
   parentName: string
@@ -17,8 +19,8 @@ type AlimtalkResult = {
 type AlimtalkReadyConfig = {
   ready: true
   missing: string[]
-  apiUrl: string
   apiKey: string
+  apiSecret: string
   senderKey: string
   templateCode: string
 }
@@ -26,8 +28,8 @@ type AlimtalkReadyConfig = {
 type AlimtalkMissingConfig = {
   ready: false
   missing: string[]
-  apiUrl: null
   apiKey: null
+  apiSecret: null
   senderKey: null
   templateCode: null
 }
@@ -44,27 +46,36 @@ function getOptionalEnv(name: string) {
   return value
 }
 
+function getSolapiAuthHeader(apiKey: string, apiSecret: string) {
+  const date = new Date().toISOString()
+  const salt = crypto.randomBytes(16).toString('hex')
+  const hmac = crypto.createHmac('sha256', apiSecret)
+  hmac.update(date + salt)
+  const signature = hmac.digest('hex')
+  return `HMAC-SHA256 apiKey=${apiKey}, date=${date}, salt=${salt}, signature=${signature}`
+}
+
 function getAlimtalkConfig(templateCode?: string): AlimtalkConfig {
-  const apiUrl = getOptionalEnv('KAKAO_ALIMTALK_API_URL')
   const apiKey = getOptionalEnv('KAKAO_ALIMTALK_API_KEY')
+  const apiSecret = getOptionalEnv('KAKAO_ALIMTALK_API_SECRET')
   const senderKey = getOptionalEnv('KAKAO_ALIMTALK_SENDER_KEY')
   const finalTemplateCode = templateCode || getOptionalEnv('KAKAO_ALIMTALK_TEMPLATE_CODE')
 
   const missing: string[] = []
-  if (!apiUrl) missing.push('KAKAO_ALIMTALK_API_URL')
   if (!apiKey) missing.push('KAKAO_ALIMTALK_API_KEY')
+  if (!apiSecret) missing.push('KAKAO_ALIMTALK_API_SECRET')
   if (!senderKey) missing.push('KAKAO_ALIMTALK_SENDER_KEY')
   if (!finalTemplateCode) missing.push('KAKAO_ALIMTALK_TEMPLATE_CODE')
 
   if (missing.length > 0) {
-    return { ready: false, missing, apiUrl: null, apiKey: null, senderKey: null, templateCode: null }
+    return { ready: false, missing, apiKey: null, apiSecret: null, senderKey: null, templateCode: null }
   }
 
   return {
     ready: true,
     missing: [],
-    apiUrl: apiUrl as string,
     apiKey: apiKey as string,
+    apiSecret: apiSecret as string,
     senderKey: senderKey as string,
     templateCode: finalTemplateCode as string,
   }
@@ -142,20 +153,28 @@ export async function sendKakaoAlimtalk({
     }
 
     const payload = {
-      senderKey: config.senderKey,
-      templateCode: config.templateCode,
-      recipient: normalizePhoneNumber(to),
-      variables: {
-        parentName,
-        message,
-      },
-      message,
+      messages: [
+        {
+          to: normalizePhoneNumber(to),
+          from: '15881234',
+          kakaoOptions: {
+            pfId: config.senderKey,
+            templateId: config.templateCode,
+            variables: {
+              '#{이름}': parentName,
+              '#{오늘의한마디}': message,
+            },
+          },
+        },
+      ],
     }
 
-    const response = await fetch(config.apiUrl, {
+    const authHeader = getSolapiAuthHeader(config.apiKey, config.apiSecret)
+
+    const response = await fetch('https://api.solapi.com/messages/v4/send', {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${config.apiKey}`,
+        Authorization: authHeader,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(payload),
