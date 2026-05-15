@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { sendPushToUser } from '../../../src/lib/push'
+import { sendPushToUser } from '@/src/lib/push'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
