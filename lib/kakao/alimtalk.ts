@@ -153,23 +153,21 @@ export async function sendKakaoAlimtalk({
     }
 
     const payload = {
-      messages: [
-        {
-          to: normalizePhoneNumber(to),
-          from: '01045788368',
-          type: 'ATA',
-          kakaoOptions: {
-            pfId: config.senderKey,
-            templateId: config.templateCode,
-            disableSms: true,
-            variables: {
-              '#{이름}': parentName,
-              '#{오늘의한마디}': message,
-            },
-          },
-        },
-      ],
-    }
+  message: {
+    to: normalizePhoneNumber(to),
+    from: '01045788368',
+    type: 'ATA',
+    kakaoOptions: {
+      pfId: config.senderKey,
+      templateId: config.templateCode,
+      disableSms: true,
+      variables: {
+        '#{이름}': parentName,
+        '#{오늘의한마디}': message,
+      },
+    },
+  },
+}
 
     const authHeader = getSolapiAuthHeader(config.apiKey, config.apiSecret)
 
