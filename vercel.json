@@ -6,6 +6,14 @@
       "schedule": "0 0 * * *"
     },
     {
+      "path": "/api/cron/lunch",
+      "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/cron/evening",
+      "schedule": "0 9 * * *"
+    },
+    {
       "path": "/api/cron/billing",
       "schedule": "0 18 * * *"
     }
