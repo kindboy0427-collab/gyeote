@@ -101,10 +101,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ ok: false, message: 'Unauthorized' }, { status: 401 })
     }
 
+    const forceRun = new URL(request.url).searchParams.get('force') === 'true'
     const { start, end } = getTodayKstRange()
     const currentKstHHmm = getCurrentKstHHmm()
 
-    if (!isWithinGlobalKstSendWindow(currentKstHHmm)) {
+    if (!forceRun && !isWithinGlobalKstSendWindow(currentKstHHmm)) {
       return NextResponse.json({
         ok: true,
         blocked: true,
@@ -164,7 +165,6 @@ export async function GET(request: NextRequest) {
       },
     })
 
-    // AI로 오늘의 한마디 생성 (모든 부모님 공통)
     const todayMessage = await generateTodayMessage()
 
     const results: Array<{
@@ -205,6 +205,7 @@ export async function GET(request: NextRequest) {
         to: parent.phone,
         parentName: parent.name,
         message,
+        templateCode: process.env.KAKAO_ALIMTALK_TEMPLATE_CODE_MORNING,
       })
 
       const logStatus = getLogStatus(alimtalkResult.statusText)
@@ -217,7 +218,7 @@ export async function GET(request: NextRequest) {
           status: logStatus,
           message,
           error: alimtalkResult.reason ?? alimtalkResult.error ?? null,
-          rawData: {
+          rawData: JSON.parse(JSON.stringify({
             kind: 'MORNING_INITIAL',
             responseId: response.id,
             timezone: KST_TIME_ZONE,
@@ -229,7 +230,7 @@ export async function GET(request: NextRequest) {
             reason: alimtalkResult.reason ?? null,
             error: alimtalkResult.error ?? null,
             data: alimtalkResult.data ?? null,
-          },
+          })),
         },
       })
 
