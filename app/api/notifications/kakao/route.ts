@@ -182,7 +182,7 @@ export async function POST(request: NextRequest) {
     }
 
     const message =
-      directMessage ?? createMorningAlimtalkMessage(parentName)
+  directMessage ?? createMorningAlimtalkMessage(parentName, '오늘 하루도 건강하게 보내세요 😊')
 
     const result = await sendKakaoAlimtalk({
       to,

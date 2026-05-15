@@ -160,7 +160,7 @@ export async function GET(request: NextRequest) {
           status: alimtalkResult.success ? 'sent' : 'failed',
           message,
           error: alimtalkResult.error ?? null,
-          rawData: { kind: friday ? 'EVENING_FRIDAY' : 'EVENING', ...alimtalkResult },
+          rawData: JSON.parse(JSON.stringify({ kind: friday ? 'EVENING_FRIDAY' : 'EVENING', ...alimtalkResult })),
         },
       })
 
