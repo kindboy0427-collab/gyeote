@@ -93,11 +93,14 @@ async function generateWeeklyReport(data: {
 ${thisWeek.fridayMessage ? `- 부모님이 남기신 말씀: "${thisWeek.fridayMessage}"` : '- 이번 주 금요일 메시지 없음'}
 
 조건:
-- 따뜻하고 감성적인 톤
-- 자녀가 읽었을 때 안심되도록
-- 데이터를 자연스럽게 녹여서
-- 3~5문장으로
-- 앞뒤 설명 없이 리포트 내용만 출력`
+- 자녀가 부모님을 걱정하는 마음으로 쓴 편지 형식
+- 데이터가 없어도 따뜻하고 감성적으로 마무리할 것
+- "고객센터", "연락주세요" 같은 서비스 멘트 절대 쓰지 말 것
+- "다음 주를 기대하겠습니다" 같은 딱딱한 마무리 쓰지 말 것
+- 부모님을 직접 부르는 호칭 쓰지 말 것 (어머니, 아버지 X)
+- 3~4문장으로
+- 앞뒤 설명 없이 리포트 내용만 출력
+- 이모지 1~2개 포함`
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
