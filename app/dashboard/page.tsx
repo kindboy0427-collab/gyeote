@@ -136,6 +136,10 @@ export default async function Dashboard() {
             orderBy: { date: 'desc' },
             take: 1,
           },
+          reports: {
+            orderBy: { createdAt: 'desc' },
+            take: 1,
+          },
         },
       },
       subscriptions: true,
@@ -179,7 +183,6 @@ export default async function Dashboard() {
       </header>
 
       <div className="max-w-5xl mx-auto px-4 py-6">
-        {/* 무료 체험 진행 중 배너 */}
         {isTrial && (
           <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
             <div>
@@ -336,16 +339,16 @@ export default async function Dashboard() {
           )}
         </section>
 
-        <section>
+        <section className="mb-6">
           {parents.length === 0 ? (
             <>
               {!activeSubscription && (
                 <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 mb-4">
                   <p className="text-sm font-bold text-blue-800">🎉 무료 체험 30일 가능</p>
-                  <p className="text-xs text-blue-600 mt-1">부모님을 등록하면 30일 무료 체험을 시작할 수 있어요.</p>
+                  <p className="text-xs text-blue-600 mt-1">부모님을 등록하면 30일 무료 체험이 자동으로 시작돼요.</p>
                 </div>
               )}
-              <div className="bg-white rounded-2xl p-8 text-center shadow-sm mb-6">
+              <div className="bg-white rounded-2xl p-8 text-center shadow-sm">
                 <div className="text-5xl mb-4">👨‍👩‍👧</div>
                 <h2 className="text-xl font-bold text-gray-800 mb-2">부모님을 등록해주세요</h2>
                 <p className="text-gray-500 text-sm mb-6">부모님 전화번호와 안부 확인 시간을 등록하면 매일 자동으로 안부 확인을 시작합니다.</p>
@@ -355,13 +358,12 @@ export default async function Dashboard() {
               </div>
             </>
           ) : (
-            <div className="mb-6">
+            <div>
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-bold text-gray-800">등록된 부모님</h2>
                 <Link href="/onboard" className="text-sm text-green-600 font-medium">+ 추가</Link>
               </div>
 
-              {/* 부모님 있고 구독 없을 때 trial 시작 버튼 */}
               {!activeSubscription && (
                 <div className="bg-blue-50 border border-blue-200 rounded-2xl p-5 mb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
                   <div>
@@ -376,6 +378,8 @@ export default async function Dashboard() {
                 const todayResponse = parent.responses[0]
                 const replyStatus = getReplyStatus(todayResponse)
                 const replyDeadline = getReplyDeadline(todayResponse)
+                const latestReport = parent.reports[0]
+
                 return (
                   <div key={parent.id} className="bg-white rounded-xl p-4 shadow-sm mb-3">
                     <div className="flex items-start gap-4">
@@ -412,6 +416,17 @@ export default async function Dashboard() {
                             <p className="font-medium text-gray-800 mt-1">{formatDateTime(replyDeadline)}</p>
                           </div>
                         </div>
+
+                        {latestReport && (
+                          <div className="mt-3 bg-green-50 border border-green-100 rounded-xl p-4">
+                            <p className="text-xs text-green-700 font-bold mb-2">
+                              📋 주간 리포트 — {formatDate(latestReport.createdAt)}
+                            </p>
+                            <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-line">
+                              {latestReport.content}
+                            </p>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
