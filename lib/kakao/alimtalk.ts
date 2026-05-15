@@ -156,10 +156,12 @@ export async function sendKakaoAlimtalk({
       messages: [
         {
           to: normalizePhoneNumber(to),
-          from: '15881234',
+          from: '01045788368',
+          type: 'ATA',
           kakaoOptions: {
             pfId: config.senderKey,
             templateId: config.templateCode,
+            disableSms: true,
             variables: {
               '#{이름}': parentName,
               '#{오늘의한마디}': message,
@@ -188,10 +190,7 @@ export async function sendKakaoAlimtalk({
         status: response.status,
         statusText: 'failed',
         data,
-        error:
-          typeof data === 'object' && data !== null && 'message' in data
-            ? String((data as { message: unknown }).message)
-            : '카카오 알림톡 발송에 실패했습니다.',
+        error: JSON.stringify(data),
       }
     }
 
@@ -206,10 +205,7 @@ export async function sendKakaoAlimtalk({
       success: false,
       status: 500,
       statusText: 'failed',
-      error:
-        error instanceof Error
-          ? error.message
-          : '카카오 알림톡 발송 중 알 수 없는 오류가 발생했습니다.',
+      error: error instanceof Error ? error.message : '알 수 없는 오류',
     }
   }
 }
