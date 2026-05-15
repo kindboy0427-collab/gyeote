@@ -1,295 +1,212 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
-import {
-  createMorningAlimtalkMessage,
-  sendKakaoAlimtalk,
-  generateTodayMessage,
-} from '@/lib/kakao/alimtalk'
+import crypto from 'crypto'
 
-export const dynamic = 'force-dynamic'
-export const runtime = 'nodejs'
-
-const KST_TIME_ZONE = 'Asia/Seoul'
-const GLOBAL_SEND_START_HHMM = '09:00'
-const GLOBAL_SEND_END_HHMM = '10:00'
-
-type CronResultStatus =
-  | 'sent'
-  | 'failed'
-  | 'skipped'
-  | 'already_exists'
-  | 'blocked_by_global_time_window'
-
-function getBearerToken(request: NextRequest) {
-  const authHeader = request.headers.get('authorization')
-  if (!authHeader) return null
-  if (!authHeader.startsWith('Bearer ')) return null
-  return authHeader.replace('Bearer ', '').trim()
+type AlimtalkPayload = {
+  to: string
+  parentName: string
+  message: string
+  templateCode?: string
 }
 
-function isCronAuthorized(request: NextRequest) {
-  const cronSecret = process.env.CRON_SECRET
-  if (!cronSecret) return true
-  const token = getBearerToken(request)
-  return token === cronSecret
+type AlimtalkResult = {
+  success: boolean
+  status: number
+  statusText: 'sent' | 'failed' | 'skipped'
+  data?: unknown
+  error?: string
+  reason?: string
 }
 
-function getKstParts(date = new Date()) {
-  const formatter = new Intl.DateTimeFormat('en-CA', {
-    timeZone: KST_TIME_ZONE,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hourCycle: 'h23',
-  })
+type AlimtalkReadyConfig = {
+  ready: true
+  missing: string[]
+  apiKey: string
+  apiSecret: string
+  senderKey: string
+  templateCode: string
+}
 
-  const parts = formatter.formatToParts(date)
-  const values = Object.fromEntries(
-    parts
-      .filter((part) => part.type !== 'literal')
-      .map((part) => [part.type, part.value])
-  )
+type AlimtalkMissingConfig = {
+  ready: false
+  missing: string[]
+  apiKey: null
+  apiSecret: null
+  senderKey: null
+  templateCode: null
+}
+
+type AlimtalkConfig = AlimtalkReadyConfig | AlimtalkMissingConfig
+
+function normalizePhoneNumber(phone: string) {
+  return phone.replace(/[^0-9]/g, '')
+}
+
+function getOptionalEnv(name: string) {
+  const value = process.env[name]
+  if (!value || value.trim() === '') return null
+  return value
+}
+
+function getSolapiAuthHeader(apiKey: string, apiSecret: string) {
+  const date = new Date().toISOString()
+  const salt = crypto.randomBytes(16).toString('hex')
+  const hmac = crypto.createHmac('sha256', apiSecret)
+  hmac.update(date + salt)
+  const signature = hmac.digest('hex')
+  return `HMAC-SHA256 apiKey=${apiKey}, date=${date}, salt=${salt}, signature=${signature}`
+}
+
+function getAlimtalkConfig(templateCode?: string): AlimtalkConfig {
+  const apiKey = getOptionalEnv('KAKAO_ALIMTALK_API_KEY')
+  const apiSecret = getOptionalEnv('KAKAO_ALIMTALK_API_SECRET')
+  const senderKey = getOptionalEnv('KAKAO_ALIMTALK_SENDER_KEY')
+  const finalTemplateCode = templateCode || getOptionalEnv('KAKAO_ALIMTALK_TEMPLATE_CODE')
+
+  const missing: string[] = []
+  if (!apiKey) missing.push('KAKAO_ALIMTALK_API_KEY')
+  if (!apiSecret) missing.push('KAKAO_ALIMTALK_API_SECRET')
+  if (!senderKey) missing.push('KAKAO_ALIMTALK_SENDER_KEY')
+  if (!finalTemplateCode) missing.push('KAKAO_ALIMTALK_TEMPLATE_CODE')
+
+  if (missing.length > 0) {
+    return { ready: false, missing, apiKey: null, apiSecret: null, senderKey: null, templateCode: null }
+  }
 
   return {
-    year: values.year,
-    month: values.month,
-    day: values.day,
-    hour: values.hour,
-    minute: values.minute,
-    second: values.second,
+    ready: true,
+    missing: [],
+    apiKey: apiKey as string,
+    apiSecret: apiSecret as string,
+    senderKey: senderKey as string,
+    templateCode: finalTemplateCode as string,
   }
 }
 
-function getCurrentKstHHmm() {
-  const parts = getKstParts()
-  return `${parts.hour}:${parts.minute}`
-}
-
-function getTodayKstRange() {
-  const parts = getKstParts()
-  const start = new Date(`${parts.year}-${parts.month}-${parts.day}T00:00:00.000+09:00`)
-  const end = new Date(`${parts.year}-${parts.month}-${parts.day}T23:59:59.999+09:00`)
-  return { start, end }
-}
-
-function hhmmToMinutes(hhmm: string) {
-  const [hour, minute] = hhmm.split(':').map((value) => Number(value))
-  if (Number.isNaN(hour) || Number.isNaN(minute)) return null
-  return hour * 60 + minute
-}
-
-function isWithinGlobalKstSendWindow(currentHHmm: string) {
-  const currentMinutes = hhmmToMinutes(currentHHmm)
-  const startMinutes = hhmmToMinutes(GLOBAL_SEND_START_HHMM)
-  const endMinutes = hhmmToMinutes(GLOBAL_SEND_END_HHMM)
-  if (currentMinutes === null || startMinutes === null || endMinutes === null) return false
-  return currentMinutes >= startMinutes && currentMinutes <= endMinutes
-}
-
-function getLogStatus(statusText: 'sent' | 'failed' | 'skipped') {
-  if (statusText === 'sent') return 'sent'
-  if (statusText === 'skipped') return 'skipped'
-  return 'failed'
-}
-
-export async function GET(request: NextRequest) {
+export async function generateTodayMessage(): Promise<string> {
   try {
-    if (!isCronAuthorized(request)) {
-      return NextResponse.json({ ok: false, message: 'Unauthorized' }, { status: 401 })
-    }
+    const today = new Date()
+    const days = ['일요일', '월요일', '화요일', '수요일', '목요일', '금요일', '토요일']
+    const months = ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월']
+    const dayOfWeek = days[today.getDay()]
+    const month = months[today.getMonth()]
+    const date = today.getDate()
+    const season =
+      today.getMonth() >= 2 && today.getMonth() <= 4 ? '봄' :
+      today.getMonth() >= 5 && today.getMonth() <= 7 ? '여름' :
+      today.getMonth() >= 8 && today.getMonth() <= 10 ? '가을' : '겨울'
 
-    const forceRun = new URL(request.url).searchParams.get('force') === 'true'
-    const { start, end } = getTodayKstRange()
-    const currentKstHHmm = getCurrentKstHHmm()
-
-    if (!forceRun && !isWithinGlobalKstSendWindow(currentKstHHmm)) {
-      return NextResponse.json({
-        ok: true,
-        blocked: true,
-        checkedAt: new Date().toISOString(),
-        timezone: KST_TIME_ZONE,
-        currentKstHHmm,
-        allowedWindow: `${GLOBAL_SEND_START_HHMM}~${GLOBAL_SEND_END_HHMM}`,
-        message: '한국시간 09:00~10:00 밖이므로 최초 안부 생성과 알림톡 발송을 차단했습니다.',
-        summary: {
-          totalParents: 0,
-          sent: 0,
-          failed: 0,
-          skipped: 0,
-          alreadyExists: 0,
-          blockedByGlobalTimeWindow: 1,
-        },
-        results: [
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': process.env.ANTHROPIC_API_KEY!,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 200,
+        messages: [
           {
-            status: 'blocked_by_global_time_window',
-            reason: `현재 한국시간 ${currentKstHHmm}, 허용 시간 ${GLOBAL_SEND_START_HHMM}~${GLOBAL_SEND_END_HHMM}`,
+            role: 'user',
+            content: `오늘은 ${month} ${date}일 ${dayOfWeek}이고 ${season}이에요.
+자녀를 대신해서 부모님께 보내는 따뜻한 안부 한마디를 써주세요.
+조건:
+- 2~3문장으로 짧게
+- 오늘 날씨, 요일, 계절을 자연스럽게 녹여서
+- 진심이 느껴지고 감성적으로
+- 존댓말 사용
+- 이모지 1개 포함
+- 앞뒤 설명 없이 문구만 출력`,
           },
         ],
-      })
+      }),
+    })
+
+    const data = await response.json()
+    return data.content?.[0]?.text?.trim() ?? '오늘 하루도 건강하게 보내세요 😊'
+  } catch {
+    return '오늘 하루도 건강하게 보내세요 😊'
+  }
+}
+
+export function createMorningAlimtalkMessage(parentName: string, todayMessage: string) {
+  return `${parentName}님, 좋은 아침이에요 🌞\n\n${todayMessage}\n\n아프거나 불편하신 게 있으시면 언제든지 편하게 말씀해 주세요.\n\n항상 당신 곁에 있을게요.\n- 곁에`
+}
+
+export async function sendKakaoAlimtalk({
+  to,
+  parentName,
+  message,
+  templateCode,
+}: AlimtalkPayload): Promise<AlimtalkResult> {
+  try {
+    const config = getAlimtalkConfig(templateCode)
+
+    if (!config.ready) {
+      return {
+        success: false,
+        status: 200,
+        statusText: 'skipped',
+        reason: 'ALIMTALK_NOT_CONFIGURED',
+        error: `카카오 알림톡 설정값이 없습니다: ${config.missing.join(', ')}`,
+        data: { missingEnv: config.missing },
+      }
     }
 
-    const parents = await prisma.parent.findMany({
-      where: {
-        isActive: true,
-        user: {
-          subscriptions: {
-            some: {
-              status: { in: ['active', 'trial'] },
+    const payload = {
+      messages: [
+        {
+          to: normalizePhoneNumber(to),
+          from: '15881234',
+          kakaoOptions: {
+            pfId: config.senderKey,
+            templateId: config.templateCode,
+            variables: {
+              '#{이름}': parentName,
+              '#{오늘의한마디}': message,
             },
           },
         },
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            email: true,
-            name: true,
-            subscriptions: {
-              where: { status: { in: ['active', 'trial'] } },
-              orderBy: { updatedAt: 'desc' },
-              take: 1,
-            },
-          },
-        },
-        responses: {
-          where: {
-            date: { gte: start, lte: end },
-            type: 'morning',
-          },
-          take: 1,
-        },
-      },
-    })
-
-    const todayMessage = await generateTodayMessage()
-
-    const results: Array<{
-      parentId: string
-      parentName: string
-      phone: string
-      status: CronResultStatus
-      reason?: string
-      error?: string
-    }> = []
-
-    for (const parent of parents) {
-      const alreadyCreated = parent.responses.length > 0
-
-      if (alreadyCreated) {
-        results.push({
-          parentId: parent.id,
-          parentName: parent.name,
-          phone: parent.phone,
-          status: 'already_exists',
-          reason: '오늘 아침 안부 Response가 이미 생성되어 있습니다.',
-        })
-        continue
-      }
-
-      const message = createMorningAlimtalkMessage(parent.name, todayMessage)
-
-      const response = await prisma.response.create({
-        data: {
-          parentId: parent.id,
-          responded: false,
-          message,
-          type: 'morning',
-        },
-      })
-
-      const alimtalkResult = await sendKakaoAlimtalk({
-        to: parent.phone,
-        parentName: parent.name,
-        message,
-        templateCode: process.env.KAKAO_ALIMTALK_TEMPLATE_CODE_MORNING,
-      })
-
-      const logStatus = getLogStatus(alimtalkResult.statusText)
-
-      await prisma.notificationLog.create({
-        data: {
-          userId: parent.userId,
-          parentId: parent.id,
-          channel: 'KAKAO_ALIMTALK',
-          status: logStatus,
-          message,
-          error: alimtalkResult.reason ?? alimtalkResult.error ?? null,
-          rawData: JSON.parse(JSON.stringify({
-            kind: 'MORNING_INITIAL',
-            responseId: response.id,
-            timezone: KST_TIME_ZONE,
-            currentKstHHmm,
-            allowedWindow: `${GLOBAL_SEND_START_HHMM}~${GLOBAL_SEND_END_HHMM}`,
-            status: alimtalkResult.status,
-            statusText: alimtalkResult.statusText,
-            success: alimtalkResult.success,
-            reason: alimtalkResult.reason ?? null,
-            error: alimtalkResult.error ?? null,
-            data: alimtalkResult.data ?? null,
-          })),
-        },
-      })
-
-      if (alimtalkResult.statusText === 'skipped') {
-        results.push({
-          parentId: parent.id,
-          parentName: parent.name,
-          phone: parent.phone,
-          status: 'skipped',
-          reason: alimtalkResult.reason ?? 'ALIMTALK_NOT_CONFIGURED',
-          error: alimtalkResult.error,
-        })
-        continue
-      }
-
-      if (!alimtalkResult.success) {
-        results.push({
-          parentId: parent.id,
-          parentName: parent.name,
-          phone: parent.phone,
-          status: 'failed',
-          error: alimtalkResult.error ?? '카카오 알림톡 발송 실패',
-        })
-        continue
-      }
-
-      results.push({
-        parentId: parent.id,
-        parentName: parent.name,
-        phone: parent.phone,
-        status: 'sent',
-      })
+      ],
     }
 
-    const summary = {
-      totalParents: parents.length,
-      sent: results.filter((r) => r.status === 'sent').length,
-      failed: results.filter((r) => r.status === 'failed').length,
-      skipped: results.filter((r) => r.status === 'skipped').length,
-      alreadyExists: results.filter((r) => r.status === 'already_exists').length,
-      blockedByGlobalTimeWindow: results.filter((r) => r.status === 'blocked_by_global_time_window').length,
+    const authHeader = getSolapiAuthHeader(config.apiKey, config.apiSecret)
+
+    const response = await fetch('https://api.solapi.com/messages/v4/send', {
+      method: 'POST',
+      headers: {
+        Authorization: authHeader,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    })
+
+    const data = await response.json().catch(() => null)
+
+    if (!response.ok) {
+      return {
+        success: false,
+        status: response.status,
+        statusText: 'failed',
+        data,
+        error: JSON.stringify(data) ?? '카카오 알림톡 발송에 실패했습니다.',
+      }
     }
 
-    return NextResponse.json({
-      ok: true,
-      checkedAt: new Date().toISOString(),
-      timezone: KST_TIME_ZONE,
-      currentKstHHmm,
-      allowedWindow: `${GLOBAL_SEND_START_HHMM}~${GLOBAL_SEND_END_HHMM}`,
-      summary,
-      results,
-    })
+    return {
+      success: true,
+      status: response.status,
+      statusText: 'sent',
+      data,
+    }
   } catch (error) {
-    return NextResponse.json(
-      {
-        ok: false,
-        message: error instanceof Error ? error.message : '아침 안부 Cron 처리 중 오류가 발생했습니다.',
-      },
-      { status: 500 }
-    )
+    return {
+      success: false,
+      status: 500,
+      statusText: 'failed',
+      error:
+        error instanceof Error
+          ? error.message
+          : '카카오 알림톡 발송 중 알 수 없는 오류가 발생했습니다.',
+    }
   }
 }
