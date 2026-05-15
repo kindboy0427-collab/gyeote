@@ -171,6 +171,14 @@ export default async function Dashboard() {
       <header className="bg-white border-b px-6 py-4 flex items-center justify-between">
         <h1 className="text-xl font-bold text-green-600">곁에</h1>
         <div className="flex items-center gap-3">
+          <a
+            href="http://pf.kakao.com/_tYbKX/chat"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs text-gray-400 hover:text-gray-600"
+          >
+            의견 보내기
+          </a>
           <Link href="/payment" className="bg-yellow-400 text-gray-800 px-4 py-2 rounded-full text-sm font-bold">
             {activeSubscription?.status === 'active' ? '구독 관리' : '구독하기'}
           </Link>
@@ -178,13 +186,7 @@ export default async function Dashboard() {
           <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center text-sm font-bold text-green-600">
             {session.user?.name?.[0] ?? 'U'}
           </div>
-          <LogoutButton />href="http://pf.kakao.com/_tYbKX/chat"
-  target="_blank"
-  rel="noopener noreferrer"
-  className="text-xs text-gray-400 hover:text-gray-600"
->
-  고객문의
-</a>
+          <LogoutButton />
         </div>
       </header>
 
@@ -220,7 +222,7 @@ export default async function Dashboard() {
                     <span className={`w-6 h-6 rounded-full text-white flex items-center justify-center text-xs ${isTrial ? 'bg-blue-500' : 'bg-green-500'}`}>
                       {isTrial ? '✦' : '✓'}
                     </span>
-                    <p className={`text-base font-bold ${isTrial ? 'text-blue-800' : 'text-green-800'}`}>
+                    <p className="text-base font-bold text-gray-900">
                       {isTrial ? '무료 체험 중' : '활성 구독'}
                     </p>
                     <span className={`px-2 py-1 rounded-full text-xs font-bold ${getStatusClass(activeSubscription.status)}`}>
@@ -251,7 +253,7 @@ export default async function Dashboard() {
                   </div>
                 </div>
                 {!isTrial && (
-                  <div className="shrink-0">
+                  <div className="flex justify-end mt-4 pt-3 border-t border-gray-100">
                     <CancelSubscriptionButton />
                   </div>
                 )}
