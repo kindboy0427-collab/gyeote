@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { sendPushToUser } from '@/lib/push'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -106,7 +107,7 @@ ${thisWeek.fridayMessage ? `- 부모님이 남기신 말씀: "${thisWeek.fridayM
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
+        model: 'claude-sonnet-4-6',
         max_tokens: 500,
         messages: [{ role: 'user', content: prompt }],
       }),
@@ -203,13 +204,19 @@ export async function GET(request: NextRequest) {
         })
 
         await prisma.report.create({
-  data: {
-    parentId: parent.id,
-    type: 'weekly',
-    content: reportText,
-    weekStart: monday,
-  },
-})
+          data: {
+            parentId: parent.id,
+            type: 'weekly',
+            content: reportText,
+            weekStart: monday,
+          },
+        })
+
+        await sendPushToUser(
+          user.id,
+          '📋 이번 주 리포트가 도착했어요',
+          `${parent.name}님의 이번 주 안부 리포트를 확인해보세요.`
+        )
 
         results.push({
           userId: user.id,
