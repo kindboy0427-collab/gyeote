@@ -178,7 +178,13 @@ export default async function Dashboard() {
           <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center text-sm font-bold text-green-600">
             {session.user?.name?.[0] ?? 'U'}
           </div>
-          <LogoutButton />
+          <LogoutButton />href="http://pf.kakao.com/_tYbKX/chat"
+  target="_blank"
+  rel="noopener noreferrer"
+  className="text-xs text-gray-400 hover:text-gray-600"
+>
+  고객문의
+</a>
         </div>
       </header>
 

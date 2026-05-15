@@ -80,13 +80,14 @@ export default function Home() {
       </section>
 
       <footer className="text-center py-6 text-xs text-gray-400 border-t">
-        <p>© 2026 에브리홈 | 사업자등록번호: 592-28-02229</p>
-        <p className="mt-1">곁에(gyeote) 서비스는 에브리홈이 운영합니다.</p>
-        <div className="flex justify-center gap-4 mt-2">
-          <a href="/terms" className="hover:text-gray-600">이용약관</a>
-          <a href="/privacy" className="hover:text-gray-600">개인정보처리방침</a>
-        </div>
-      </footer>
+  <p>© 2026 에브리홈 | 사업자등록번호: 592-28-02229</p>
+  <p className="mt-1">곁에(gyeote) 서비스는 에브리홈이 운영합니다.</p>
+  <div className="flex justify-center gap-4 mt-2">
+    <a href="/terms" className="hover:text-gray-600">이용약관</a>
+    <a href="/privacy" className="hover:text-gray-600">개인정보처리방침</a>
+    <a href="http://pf.kakao.com/_tYbKX/chat" target="_blank" rel="noopener noreferrer" className="hover:text-gray-600">고객문의</a>
+  </div>
+</footer>
     </main>
   )
 }
