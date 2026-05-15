@@ -29,27 +29,23 @@ function getKstWeekRange() {
   })
   const parts = formatter.formatToParts(now)
   const values = Object.fromEntries(parts.filter(p => p.type !== 'literal').map(p => [p.type, p.value]))
-  
+
   const today = new Date(`${values.year}-${values.month}-${values.day}T00:00:00.000+09:00`)
-  const dayOfWeek = today.getDay() // 0=일, 1=월 ... 6=토
-  
-  // 이번 주 월요일
+  const dayOfWeek = today.getDay()
+
   const monday = new Date(today)
   monday.setDate(today.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1))
-  
-  // 이번 주 일요일 (오늘)
+
   const sunday = new Date(today)
   sunday.setHours(23, 59, 59, 999)
-  
-  // 지난 주 월요일
+
   const lastMonday = new Date(monday)
   lastMonday.setDate(monday.getDate() - 7)
-  
-  // 지난 주 일요일
+
   const lastSunday = new Date(monday)
   lastSunday.setDate(monday.getDate() - 1)
   lastSunday.setHours(23, 59, 59, 999)
-  
+
   return { monday, sunday, lastMonday, lastSunday }
 }
 
@@ -74,7 +70,7 @@ async function generateWeeklyReport(data: {
 }): Promise<string> {
   try {
     const { parentName, thisWeek, lastWeek } = data
-    
+
     const thisWeekRate = thisWeek.morningTotal > 0
       ? Math.round((thisWeek.morningResponded / thisWeek.morningTotal) * 100)
       : 0
@@ -129,7 +125,6 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ ok: false, message: 'Unauthorized' }, { status: 401 })
     }
 
-    const forceRun = new URL(request.url).searchParams.get('force') === 'true'
     const { monday, sunday, lastMonday, lastSunday } = getKstWeekRange()
 
     const users = await prisma.user.findMany({
@@ -157,14 +152,12 @@ export async function GET(request: NextRequest) {
       for (const parent of user.parents) {
         const responses = parent.responses
 
-        // 이번 주 데이터
         const morningResponses = responses.filter(r => r.type === 'morning')
         const lunchResponses = responses.filter(r => r.type === 'lunch')
         const eveningResponses = responses.filter(r => r.type === 'evening')
         const helpResponses = responses.filter(r => r.message?.includes('도움이 필요해요'))
         const fridayResponse = responses.find(r => r.type === 'evening' && r.responded && r.message)
 
-        // 평균 응답 시간
         const respondedTimes = responses
           .filter(r => r.responded && r.respondedAt)
           .map(r => new Date(r.respondedAt!).getHours())
@@ -172,7 +165,6 @@ export async function GET(request: NextRequest) {
           ? Math.round(respondedTimes.reduce((a, b) => a + b, 0) / respondedTimes.length)
           : null
 
-        // 연속 응답일 계산
         let consecutiveDays = 0
         for (let i = 6; i >= 0; i--) {
           const date = new Date(sunday)
@@ -186,7 +178,6 @@ export async function GET(request: NextRequest) {
           else consecutiveDays = 0
         }
 
-        // 지난 주 데이터
         const lastWeekResponses = await prisma.response.findMany({
           where: { parentId: parent.id, date: { gte: lastMonday, lte: lastSunday }, type: 'morning' },
         })
@@ -211,15 +202,14 @@ export async function GET(request: NextRequest) {
           },
         })
 
-        // 리포트 DB 저장
         await prisma.report.create({
-          data: {
-            parentId: parent.id,
-            type: 'weekly',
-            content: reportText,
-            generatedAt: new Date(),
-          },
-        })
+  data: {
+    parentId: parent.id,
+    type: 'weekly',
+    content: reportText,
+    weekStart: monday,
+  },
+})
 
         results.push({
           userId: user.id,
