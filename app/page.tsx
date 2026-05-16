@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import KakaoShareButton from './components/KakaoShareButton'
 
 export default function Home() {
   return (
@@ -51,7 +52,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="px-6 py-16 bg-white"><section className="px-6 py-16 bg-white">
+      <section className="px-6 py-16 bg-white">
         <h3 className="text-center text-2xl font-bold text-gray-800 mb-10">실제 사용 후기</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
           {[
@@ -69,6 +70,8 @@ export default function Home() {
           ))}
         </div>
       </section>
+
+      <section className="px-6 py-16 bg-gray-50">
         <h3 className="text-center text-2xl font-bold text-gray-800 mb-12">시작하기까지 3분이면 충분해요</h3>
         <div className="flex flex-col md:flex-row items-center justify-center gap-6 max-w-3xl mx-auto">
           {[
@@ -98,6 +101,9 @@ export default function Home() {
         >
           지금 무료로 시작하기
         </Link>
+        <div className="mt-4">
+          <KakaoShareButton />
+        </div>
       </section>
 
       <footer className="text-center py-6 text-xs text-gray-400 border-t">
