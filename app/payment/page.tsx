@@ -40,8 +40,7 @@ const plans: PaymentPlan[] = [
     originalPrice: 70800,
     discountRate: 29,
     cycleText: '년',
-    badge: '할인',
-  },
+    },
 ]
 
 const providers: PaymentProvider[] = [
