@@ -173,7 +173,7 @@ export default async function Dashboard() {
     <main className="min-h-screen bg-gray-50">
       <PushInit />
       <header className="bg-white border-b px-6 py-4 flex items-center justify-between">
-        <h1 className="text-xl font-bold text-green-600">곁에</h1>
+        <Link href="/" className="text-xl font-bold text-green-600">곁에</Link>
         <div className="flex items-center gap-3">
           <Link href="/payment" className="bg-yellow-400 text-gray-800 px-4 py-2 rounded-full text-sm font-bold">
             {activeSubscription?.status === 'active' ? '구독 관리' : '구독하기'}
