@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const { name, phone, morningTime, medication } = await req.json()
+  const { name, phone, morningTime } = await req.json()
 
   try {
     const user = await prisma.user.upsert({
@@ -22,6 +22,17 @@ export async function POST(req: NextRequest) {
         name: session?.user?.name ?? 'user',
       },
     })
+
+    const parentCount = await prisma.parent.count({
+      where: { userId: user.id },
+    })
+
+    if (parentCount >= 2) {
+      return NextResponse.json(
+        { error: '부모님은 최대 2명까지만 등록할 수 있습니다.' },
+        { status: 400 }
+      )
+    }
 
     const parent = await prisma.parent.create({
       data: {

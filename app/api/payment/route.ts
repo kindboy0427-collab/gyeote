@@ -8,10 +8,20 @@ export async function POST(req: NextRequest) {
   const kakaoId = (session?.user as any)?.id
   if (!kakaoId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { paymentKey, orderId, amount } = await req.json()
+  const { paymentKey, orderId, amount, plan } = await req.json()
+
+  const isYearly = plan === 'yearly'
+  const price = isYearly ? 50000 : 4900
+  const planName = isYearly ? 'yearly' : 'monthly'
+
+  const nextBilling = new Date()
+  if (isYearly) {
+    nextBilling.setFullYear(nextBilling.getFullYear() + 1)
+  } else {
+    nextBilling.setMonth(nextBilling.getMonth() + 1)
+  }
 
   try {
-    // 토스페이먼츠 결제 승인
     const response = await fetch('https://api.tosspayments.com/v1/payments/confirm', {
       method: 'POST',
       headers: {
@@ -27,30 +37,25 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: data.message }, { status: 400 })
     }
 
-    // 유저 찾기
     const user = await prisma.user.findFirst({
       where: { email: `kakao_${kakaoId}@gyeote.com` },
     })
     if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 })
 
-    // 구독 정보 저장
-    const nextBilling = new Date()
-    nextBilling.setMonth(nextBilling.getMonth() + 1)
-
     await prisma.subscription.upsert({
       where: { userId: user.id },
       update: {
         status: 'active',
-        plan: 'care',
-        price: 5900,
+        plan: planName,
+        price,
         billingKey: data.paymentKey,
         nextBillingAt: nextBilling,
       },
       create: {
         userId: user.id,
         status: 'active',
-        plan: 'care',
-        price: 5900,
+        plan: planName,
+        price,
         billingKey: data.paymentKey,
         nextBillingAt: nextBilling,
       },

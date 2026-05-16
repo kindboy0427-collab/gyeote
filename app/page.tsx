@@ -27,7 +27,11 @@ export default function Home() {
         >
           카카오로 시작하기
         </Link>
-        <p className="text-sm text-gray-400 mt-4">월 4,900원 · 언제든 해지 가능</p>
+        <p className="text-sm text-gray-400 mt-4">
+          <span className="line-through">월 5,900원</span>
+          <span className="text-green-600 font-bold ml-2">월 4,900원</span>
+          <span className="ml-1">· 언제든 해지 가능</span>
+        </p>
       </section>
 
       <section className="px-6 py-16 bg-gray-50">
@@ -70,7 +74,7 @@ export default function Home() {
         <h3 className="text-2xl md:text-3xl font-bold text-white mb-4">
           오늘부터 부모님 곁에 있어드리세요
         </h3>
-        <p className="text-green-100 mb-8 text-sm">첫 달 무료 체험 · 언제든 해지 가능</p>
+        <p className="text-green-100 mb-8 text-sm">30일 무료 체험 · 언제든 해지 가능</p>
         <Link
           href="/login"
           className="bg-white text-green-600 font-bold px-10 py-4 rounded-full text-lg shadow hover:bg-green-50 transition-colors inline-block"
@@ -80,14 +84,14 @@ export default function Home() {
       </section>
 
       <footer className="text-center py-6 text-xs text-gray-400 border-t">
-  <p>© 2026 에브리홈 | 사업자등록번호: 592-28-02229</p>
-  <p className="mt-1">곁에(gyeote) 서비스는 에브리홈이 운영합니다.</p>
-  <div className="flex justify-center gap-4 mt-2">
-    <a href="/terms" className="hover:text-gray-600">이용약관</a>
-    <a href="/privacy" className="hover:text-gray-600">개인정보처리방침</a>
-    <a href="http://pf.kakao.com/_tYbKX/chat" target="_blank" rel="noopener noreferrer" className="hover:text-gray-600">고객문의</a>
-  </div>
-</footer>
+        <p>© 2026 에브리홈 | 사업자등록번호: 592-28-02229</p>
+        <p className="mt-1">곁에(gyeote) 서비스는 에브리홈이 운영합니다.</p>
+        <div className="flex justify-center gap-4 mt-2">
+          <a href="/terms" className="hover:text-gray-600">이용약관</a>
+          <a href="/privacy" className="hover:text-gray-600">개인정보처리방침</a>
+          <a href="http://pf.kakao.com/_tYbKX/chat" target="_blank" rel="noopener noreferrer" className="hover:text-gray-600">고객문의</a>
+        </div>
+      </footer>
     </main>
   )
 }

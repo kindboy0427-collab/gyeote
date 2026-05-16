@@ -28,6 +28,10 @@ function formatDateTime(date: Date | string | null | undefined) {
   return new Date(date).toLocaleString('ko-KR')
 }
 
+function formatPhone(phone: string) {
+  return phone.replace(/(\d{3})-?(\d{4})-?(\d{4})/, '$1-****-$3')
+}
+
 function getTodayRange() {
   const now = new Date()
   const start = new Date(now)
@@ -171,14 +175,6 @@ export default async function Dashboard() {
       <header className="bg-white border-b px-6 py-4 flex items-center justify-between">
         <h1 className="text-xl font-bold text-green-600">곁에</h1>
         <div className="flex items-center gap-3">
-          <a
-            href="http://pf.kakao.com/_tYbKX/chat"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-xs text-gray-400 hover:text-gray-600"
-          >
-            의견 보내기
-          </a>
           <Link href="/payment" className="bg-yellow-400 text-gray-800 px-4 py-2 rounded-full text-sm font-bold">
             {activeSubscription?.status === 'active' ? '구독 관리' : '구독하기'}
           </Link>
@@ -186,7 +182,17 @@ export default async function Dashboard() {
           <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center text-sm font-bold text-green-600">
             {session.user?.name?.[0] ?? 'U'}
           </div>
-          <LogoutButton />
+          <div className="flex items-center gap-3 border-l border-gray-200 pl-3">
+            <a
+              href="http://pf.kakao.com/_tYbKX/chat"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-gray-400 hover:text-gray-600"
+            >
+              의견 보내기
+            </a>
+            <LogoutButton />
+          </div>
         </div>
       </header>
 
@@ -216,40 +222,38 @@ export default async function Dashboard() {
 
           {activeSubscription && (
             <div className={`border rounded-2xl p-5 mb-4 ${isTrial ? 'bg-blue-50 border-blue-200' : 'bg-green-50 border-green-200'}`}>
-              <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-                <div className="w-full">
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className={`w-6 h-6 rounded-full text-white flex items-center justify-center text-xs ${isTrial ? 'bg-blue-500' : 'bg-green-500'}`}>
-                      {isTrial ? '✦' : '✓'}
-                    </span>
-                    <p className="text-base font-bold text-gray-900">
-                      {isTrial ? '무료 체험 중' : '활성 구독'}
-                    </p>
-                    <span className={`px-2 py-1 rounded-full text-xs font-bold ${getStatusClass(activeSubscription.status)}`}>
-                      {getStatusLabel(activeSubscription.status)}
-                    </span>
+              <div className="w-full">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className={`w-6 h-6 rounded-full text-white flex items-center justify-center text-xs ${isTrial ? 'bg-blue-500' : 'bg-green-500'}`}>
+                    {isTrial ? '✦' : '✓'}
+                  </span>
+                  <p className="text-base font-bold text-gray-900">
+                    {isTrial ? '무료 체험 중' : '활성 구독'}
+                  </p>
+                  <span className={`px-2 py-1 rounded-full text-xs font-bold ${getStatusClass(activeSubscription.status)}`}>
+                    {getStatusLabel(activeSubscription.status)}
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                  <div>
+                    <p className={`text-xs ${isTrial ? 'text-blue-700/70' : 'text-green-700/70'}`}>플랜</p>
+                    <p className="font-bold text-gray-900 mt-1">{getPlanLabel(activeSubscription.plan)}</p>
                   </div>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                    <div>
-                      <p className={`text-xs ${isTrial ? 'text-blue-700/70' : 'text-green-700/70'}`}>플랜</p>
-                      <p className="font-bold text-gray-900 mt-1">{getPlanLabel(activeSubscription.plan)}</p>
-                    </div>
-                    <div>
-                      <p className={`text-xs ${isTrial ? 'text-blue-700/70' : 'text-green-700/70'}`}>결제 수단</p>
-                      <p className="font-bold text-gray-900 mt-1">{getProviderLabel(activeSubscription.provider)}</p>
-                    </div>
-                    <div>
-                      <p className={`text-xs ${isTrial ? 'text-blue-700/70' : 'text-green-700/70'}`}>금액</p>
-                      <p className="font-bold text-gray-900 mt-1">
-                        {isTrial ? '무료' : `${activeSubscription.price.toLocaleString('ko-KR')}원`}
-                      </p>
-                    </div>
-                    <div>
-                      <p className={`text-xs ${isTrial ? 'text-blue-700/70' : 'text-green-700/70'}`}>
-                        {isTrial ? '체험 만료일' : '다음 결제 예정일'}
-                      </p>
-                      <p className="font-bold text-gray-900 mt-1">{formatDate(activeSubscription.nextBillingAt)}</p>
-                    </div>
+                  <div>
+                    <p className={`text-xs ${isTrial ? 'text-blue-700/70' : 'text-green-700/70'}`}>결제 수단</p>
+                    <p className="font-bold text-gray-900 mt-1">{getProviderLabel(activeSubscription.provider)}</p>
+                  </div>
+                  <div>
+                    <p className={`text-xs ${isTrial ? 'text-blue-700/70' : 'text-green-700/70'}`}>금액</p>
+                    <p className="font-bold text-gray-900 mt-1">
+                      {isTrial ? '무료' : `${activeSubscription.price.toLocaleString('ko-KR')}원`}
+                    </p>
+                  </div>
+                  <div>
+                    <p className={`text-xs ${isTrial ? 'text-blue-700/70' : 'text-green-700/70'}`}>
+                      {isTrial ? '체험 만료일' : '다음 결제 예정일'}
+                    </p>
+                    <p className="font-bold text-gray-900 mt-1">{formatDate(activeSubscription.nextBillingAt)}</p>
                   </div>
                 </div>
                 {!isTrial && (
@@ -368,8 +372,15 @@ export default async function Dashboard() {
           ) : (
             <div>
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-bold text-gray-800">등록된 부모님</h2>
-                <Link href="/onboard" className="text-sm text-green-600 font-medium">+ 추가</Link>
+                <div>
+                  <h2 className="text-lg font-bold text-gray-800">등록된 부모님</h2>
+                  <p className="text-xs text-gray-400 mt-0.5">최대 2명까지 등록 가능합니다.</p>
+                </div>
+                {parents.length < 2 && (
+                  <Link href="/onboard" className="text-sm text-green-600 font-medium">
+                    + 추가 ({parents.length}/2)
+                  </Link>
+                )}
               </div>
 
               {!activeSubscription && (
@@ -396,7 +407,7 @@ export default async function Dashboard() {
                         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
                           <div>
                             <div className="font-medium text-gray-800">{parent.name}</div>
-                            <div className="text-sm text-gray-500">{parent.phone} · 아침 {parent.morningTime}</div>
+                            <div className="text-sm text-gray-500">{formatPhone(parent.phone)} · 아침 {parent.morningTime}</div>
                           </div>
                           <div className="flex items-center gap-3">
                             <span className={`w-fit px-3 py-1 rounded-full text-xs font-bold ${replyStatus.className}`}>
