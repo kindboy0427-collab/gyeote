@@ -32,11 +32,13 @@ const plans: PaymentPlan[] = [
     discountRate: 17,
     cycleText: '월',
   },
-  {
+{
     id: 'yearly',
     name: '연간 구독',
     description: '매년 자동 결제 · 언제든지 해지 가능',
     price: 50000,
+    originalPrice: 70800,
+    discountRate: 29,
     cycleText: '년',
     badge: '할인',
   },
@@ -175,7 +177,7 @@ export default function PaymentPage() {
 {plan.id === 'yearly' && (
   <p className="text-xs text-green-600 mt-1">하루 136원</p>
 )}
-)}
+)
                     </div>
                   </div>
                 </button>
