@@ -413,9 +413,10 @@ export default async function Dashboard() {
                           </div>
                           <div className="flex items-center gap-3">
                             <span className={`w-fit px-3 py-1 rounded-full text-xs font-bold ${replyStatus.className}`}>
-                              {replyStatus.label}
-                            </span>
-                            <DeleteParentButton parentId={parent.id} />
+  {replyStatus.label}
+</span>
+<RefreshButton />
+<DeleteParentButton parentId={parent.id} />
                           </div>
                         </div>
                         <p className="text-xs text-gray-500 mt-2">{replyStatus.description}</p>
