@@ -172,6 +172,10 @@ export default function PaymentPage() {
 {plan.id === 'monthly' && (
   <p className="text-xs text-green-600 mt-1">하루 163원</p>
 )}
+{plan.id === 'yearly' && (
+  <p className="text-xs text-green-600 mt-1">하루 136원</p>
+)}
+)}
                     </div>
                   </div>
                 </button>
