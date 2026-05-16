@@ -107,10 +107,11 @@ export async function generateTodayMessage(): Promise<string> {
         messages: [
           {
             role: 'user',
-            content: `오늘은 ${month} ${date}일 ${dayOfWeek}이고 ${season}이에요.
-자녀를 대신해서 부모님께 보내는 따뜻한 안부 한마디를 써주세요.
+            content: `오늘은 ${month} ${date}일 ${dayOfWeek}이고 ${season}입니다.
+자녀를 대신해서 부모님께 보내는 저녁 안부 한마디를 써주세요.
 조건:
 - 2~3문장으로 짧게
+- 오늘 하루 수고하셨다는 격려와 고생했다는 따뜻한 위로의 톤
 - 오늘 날씨, 요일, 계절을 자연스럽게 녹여서
 - 진심이 느껴지고 감성적으로
 - 존댓말 사용
