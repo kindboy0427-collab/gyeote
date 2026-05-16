@@ -169,6 +169,9 @@ export default function PaymentPage() {
                       )}
                       <p className="text-xl font-bold text-green-600">{formatPrice(plan.price)}원</p>
                       <p className="text-xs text-gray-400">/ {plan.cycleText}</p>
+{plan.id === 'monthly' && (
+  <p className="text-xs text-green-600 mt-1">하루 163원</p>
+)}
                     </div>
                   </div>
                 </button>
