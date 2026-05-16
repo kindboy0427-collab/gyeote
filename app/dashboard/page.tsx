@@ -176,7 +176,6 @@ export default async function Dashboard() {
       <header className="bg-white border-b px-6 py-4 flex items-center justify-between">
         <Link href="/" className="text-xl font-bold text-green-600">곁에</Link>
         <div className="flex items-center gap-3">
-          <RefreshButton />
           <Link href="/payment" className="bg-yellow-400 text-gray-800 px-4 py-2 rounded-full text-sm font-bold">
             {activeSubscription?.status === 'active' ? '구독 관리' : '구독하기'}
           </Link>
@@ -185,12 +184,7 @@ export default async function Dashboard() {
             {session.user?.name?.[0] ?? 'U'}
           </div>
           <div className="flex items-center gap-3 border-l border-gray-200 pl-3">
-            <a
-              href="http://pf.kakao.com/_tYbKX/chat"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-xs text-gray-400 hover:text-gray-600"
-            >
+            <a href="http://pf.kakao.com/_tYbKX/chat" target="_blank" rel="noopener noreferrer" className="text-xs text-gray-400 hover:text-gray-600">
               의견 보내기
             </a>
             <LogoutButton />
@@ -229,9 +223,7 @@ export default async function Dashboard() {
                   <span className={`w-6 h-6 rounded-full text-white flex items-center justify-center text-xs ${isTrial ? 'bg-blue-500' : 'bg-green-500'}`}>
                     {isTrial ? '✦' : '✓'}
                   </span>
-                  <p className="text-base font-bold text-gray-900">
-                    {isTrial ? '무료 체험 중' : '활성 구독'}
-                  </p>
+                  <p className="text-base font-bold text-gray-900">{isTrial ? '무료 체험 중' : '활성 구독'}</p>
                   <span className={`px-2 py-1 rounded-full text-xs font-bold ${getStatusClass(activeSubscription.status)}`}>
                     {getStatusLabel(activeSubscription.status)}
                   </span>
@@ -413,10 +405,10 @@ export default async function Dashboard() {
                           </div>
                           <div className="flex items-center gap-3">
                             <span className={`w-fit px-3 py-1 rounded-full text-xs font-bold ${replyStatus.className}`}>
-  {replyStatus.label}
-</span>
-<RefreshButton />
-<DeleteParentButton parentId={parent.id} />
+                              {replyStatus.label}
+                            </span>
+                            <RefreshButton />
+                            <DeleteParentButton parentId={parent.id} />
                           </div>
                         </div>
                         <p className="text-xs text-gray-500 mt-2">{replyStatus.description}</p>
