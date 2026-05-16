@@ -1,8 +1,8 @@
+import Link from 'next/link'
 import { getServerSession } from 'next-auth'
 import { redirect } from 'next/navigation'
 import { authOptions } from '../../../src/lib/auth'
 import { prisma } from '@/lib/prisma'
-import Link from 'next/link'
 
 function formatDate(date: Date | string | null | undefined) {
   if (!date) return '-'
