@@ -20,6 +20,10 @@
     {
       "path": "/api/cron/billing",
       "schedule": "0 18 * * *"
+    },
+    {
+      "path": "/api/cron/billing-reminder",
+      "schedule": "0 1 * * *"
     }
   ]
 }
