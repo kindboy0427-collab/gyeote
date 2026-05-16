@@ -3,6 +3,26 @@ import KakaoProvider from 'next-auth/providers/kakao'
 import { prisma } from './prisma'
 
 export const authOptions: NextAuthOptions = {
+  cookies: {
+    pkceCodeVerifier: {
+      name: 'next-auth.pkce.code_verifier',
+      options: {
+        httpOnly: true,
+        sameSite: 'none',
+        path: '/',
+        secure: true,
+      },
+    },
+    state: {
+      name: 'next-auth.state',
+      options: {
+        httpOnly: true,
+        sameSite: 'none',
+        path: '/',
+        secure: true,
+      },
+    },
+  },
   providers: [
     KakaoProvider({
       clientId: process.env.KAKAO_CLIENT_ID!,
