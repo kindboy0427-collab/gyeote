@@ -74,7 +74,7 @@ export default function Home() {
         <h3 className="text-2xl md:text-3xl font-bold text-white mb-4">
           오늘부터 부모님 곁에 있어드리세요
         </h3>
-        <p className="text-green-100 mb-8 text-sm">30일 무료 체험 · 언제든 해지 가능</p>
+        <p className="text-green-100 mb-8 text-sm">7일 무료 체험 · 언제든 해지 가능</p>
         <Link
           href="/login"
           className="bg-white text-green-600 font-bold px-10 py-4 rounded-full text-lg shadow hover:bg-green-50 transition-colors inline-block"
