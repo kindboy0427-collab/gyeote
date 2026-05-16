@@ -356,8 +356,8 @@ export default async function Dashboard() {
             <>
               {!activeSubscription && (
                 <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 mb-4">
-                  <p className="text-sm font-bold text-blue-800">🎉 무료 체험 30일 가능</p>
-                  <p className="text-xs text-blue-600 mt-1">부모님을 등록하면 30일 무료 체험이 자동으로 시작돼요.</p>
+                  <p className="text-sm font-bold text-blue-800">🎉 7일 무료 체험을 시작해보세요</p>
+<p className="text-xs text-blue-600 mt-1">카드 없이 7일간 무료로 서비스를 이용할 수 있어요.</p>
                 </div>
               )}
               <div className="bg-white rounded-2xl p-8 text-center shadow-sm">
@@ -386,8 +386,8 @@ export default async function Dashboard() {
               {!activeSubscription && (
                 <div className="bg-blue-50 border border-blue-200 rounded-2xl p-5 mb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
                   <div>
-                    <p className="text-sm font-bold text-blue-800">🎉 30일 무료 체험을 시작해보세요</p>
-                    <p className="text-xs text-blue-600 mt-1">카드 없이 30일간 무료로 서비스를 이용할 수 있어요.</p>
+                    <p className="text-sm font-bold text-blue-800">🎉 무료 체험 7일 가능</p>
+<p className="text-xs text-blue-600 mt-1">부모님을 등록하면 초대 코드로 7일 무료 체험을 시작할 수 있어요.</p>
                   </div>
                   <StartTrialButton />
                 </div>
