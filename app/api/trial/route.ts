@@ -30,15 +30,23 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 })
 
   const existing = user.subscriptions.find(
-    (s) => s.status === 'trial' || s.status === 'active'
+    (s) => s.status === 'active'
   )
-  if (existing) return NextResponse.json({ error: '이미 구독 중이거나 체험을 사용했습니다.' }, { status: 400 })
+  if (existing) return NextResponse.json({ error: '이미 구독 중입니다.' }, { status: 400 })
 
   const trialEnd = new Date()
   trialEnd.setDate(trialEnd.getDate() + 7)
 
-  const subscription = await prisma.subscription.create({
-    data: {
+  const subscription = await prisma.subscription.upsert({
+    where: { userId: user.id },
+    update: {
+      plan: 'monthly',
+      provider: 'TRIAL',
+      status: 'trial',
+      price: 0,
+      nextBillingAt: trialEnd,
+    },
+    create: {
       userId: user.id,
       plan: 'monthly',
       provider: 'TRIAL',
