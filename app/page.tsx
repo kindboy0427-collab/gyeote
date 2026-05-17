@@ -55,7 +55,7 @@ export default function Home() {
 
       <section className="px-6 py-16 bg-white">
 
-        <h3 className="text-center text-2xl font-bold text-gray-800 mb-10">이런 마음, 혹시 나만 그런 게 아니었어요</h3>
+        <h3 className="text-center text-2xl font-bold text-gray-800 mb-10">마지막으로 부모님 목소리 들은 게 언제이신가요?</h3>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
 
