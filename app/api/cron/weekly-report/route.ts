@@ -80,27 +80,27 @@ async function generateWeeklyReport(data: {
       : 0
     const rateDiff = thisWeekRate - lastWeekRate
 
-    const prompt = `부모님(${parentName}?????�번 �??��? ?�이?��? 바탕?�로 ?��??�게 보내??주간 리포?��? ?�성?�주?�요.
+    const prompt = `부모님(${parentName}님)의 이번 주 안부 데이터를 바탕으로 자녀에게 보내는 주간 리포트를 작성해주세요.
 
-?�이??
-- ?�침 ?�답�? ${thisWeek.morningResponded}/${thisWeek.morningTotal}??(${thisWeekRate}%)
-- ?�심 ?�답�? ${thisWeek.lunchResponded}/${thisWeek.lunchTotal}??
-- ?�???�답�? ${thisWeek.eveningResponded}/${thisWeek.eveningTotal}??
-- ?��? ?�청 ?�수: ${thisWeek.helpCount}??
-- ?�속 ?�답?? ${thisWeek.consecutiveDays}??
-- ?�균 ?�답 ?�간: ${thisWeek.avgResponseHour !== null ? `?�전/?�후 ${thisWeek.avgResponseHour}?? : '?�이???�음'}
-- 지??�??��??�답�?변?? ${rateDiff > 0 ? `+${rateDiff}%` : `${rateDiff}%`}
-${thisWeek.fridayMessage ? `- 부모님???�기??말�?: "${thisWeek.fridayMessage}"` : '- ?�번 �?금요??메시지 ?�음'}
+데이터:
+- 아침 응답률: ${thisWeek.morningResponded}/${thisWeek.morningTotal}회 (${thisWeekRate}%)
+- 점심 응답률: ${thisWeek.lunchResponded}/${thisWeek.lunchTotal}회
+- 저녁 응답률: ${thisWeek.eveningResponded}/${thisWeek.eveningTotal}회
+- 도움 요청 횟수: ${thisWeek.helpCount}회
+- 연속 응답일: ${thisWeek.consecutiveDays}일
+- 평균 응답 시간: ${thisWeek.avgResponseHour !== null ? `오전/오후 ${thisWeek.avgResponseHour}시` : '데이터 없음'}
+- 지난 주 대비 응답률 변화: ${rateDiff > 0 ? `+${rateDiff}%` : `${rateDiff}%`}
+${thisWeek.fridayMessage ? `- 부모님이 남기신 말씀: "${thisWeek.fridayMessage}"` : '- 이번 주 금요일 메시지 없음'}
 
 조건:
-- ?��?가 부모님??걱정?�는 마음?�로 ???��? ?�식
-- ?�이?��? ?�어???�뜻?�고 감성?�으�?마무리할 �?
-- "고객?�터", "?�락주세?? 같�? ?�비??멘트 ?��? ?��? �?�?
-- "?�음 주�? 기�??�겠?�니?? 같�? ?�딱??마무�??��? �?�?
-- 부모님??직접 부르는 ?�칭 ?��? �?�?(?�머?? ?�버지 X)
-- 3~4문장?�로
-- ?�뒤 ?�명 ?�이 리포???�용�?출력
-- ?�모지 1~2�??�함`
+- 자녀가 부모님을 걱정하는 마음으로 쓴 편지 형식
+- 데이터가 없어도 따뜻하고 감성적으로 마무리할 것
+- "고객센터", "연락주세요" 같은 서비스 멘트 절대 쓰지 말 것
+- "다음 주를 기대하겠습니다" 같은 딱딱한 마무리 쓰지 말 것
+- 부모님을 직접 부르는 호칭 쓰지 말 것 (어머니, 아버지 X)
+- 3~4문장으로
+- 앞뒤 설명 없이 리포트 내용만 출력
+- 이모지 1~2개 포함`
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -117,9 +117,9 @@ ${thisWeek.fridayMessage ? `- 부모님???�기??말�?: "${thisWeek.fridayMes
     })
 
     const result = await response.json()
-    return result.content?.[0]?.text?.trim() ?? '?�번 �?리포?��? ?�성?????�었?�요.'
+    return result.content?.[0]?.text?.trim() ?? '이번 주 리포트를 생성할 수 없었어요.'
   } catch {
-    return '?�번 �?리포?��? ?�성?????�었?�요.'
+    return '이번 주 리포트를 생성할 수 없었어요.'
   }
 }
 
@@ -159,7 +159,7 @@ export async function GET(request: NextRequest) {
         const morningResponses = responses.filter(r => r.type === 'morning')
         const lunchResponses = responses.filter(r => r.type === 'lunch')
         const eveningResponses = responses.filter(r => r.type === 'evening')
-        const helpResponses = responses.filter(r => r.message?.includes('?��????�요?�요'))
+        const helpResponses = responses.filter(r => r.message?.includes('도움이 필요해요'))
         const fridayResponse = responses.find(r => r.type === 'evening' && r.responded && r.message)
 
         const respondedTimes = responses
@@ -217,8 +217,8 @@ export async function GET(request: NextRequest) {
 
         await sendPushToUser(
           user.id,
-          '?�� ?�번 �?리포?��? ?�착?�어??,
-          `${parent.name}?�의 ?�번 �??��? 리포?��? ?�인?�보?�요.`
+          '📋 이번 주 리포트가 도착했어요',
+          `${parent.name}님의 이번 주 안부 리포트를 확인해보세요.`
         )
 
         results.push({
@@ -234,7 +234,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ ok: true, results })
   } catch (error) {
     return NextResponse.json(
-      { ok: false, message: error instanceof Error ? error.message : '주간 리포???�성 ?�류' },
+      { ok: false, message: error instanceof Error ? error.message : '주간 리포트 생성 오류' },
       { status: 500 }
     )
   }
