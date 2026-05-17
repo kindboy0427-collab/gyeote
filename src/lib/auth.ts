@@ -33,7 +33,10 @@ export const authOptions: NextAuthOptions = {
     async signIn({ profile }: any) {
       try {
         const kakaoId = profile?.id?.toString()
-        const email = profile?.kakao_account?.email ?? `kakao_${kakaoId}@gyeote.com`
+        if (!kakaoId) return false
+
+        // 이메일 동의 여부 상관없이 카카오 ID로만 처리
+        const email = `kakao_${kakaoId}@gyeote.com`
         const name = profile?.kakao_account?.profile?.nickname ?? profile?.properties?.nickname ?? '사용자'
 
         const user = await prisma.user.findFirst({ where: { email } })
@@ -60,7 +63,8 @@ export const authOptions: NextAuthOptions = {
 
     async jwt({ token, profile }: any) {
       if (profile) {
-        token.email = profile.kakao_account?.email ?? `kakao_${token.sub}@gyeote.com`
+        // 이메일 동의 여부 상관없이 카카오 ID 기반 이메일 사용
+        token.email = `kakao_${token.sub}@gyeote.com`
         token.name = profile.kakao_account?.profile?.nickname ?? profile.properties?.nickname ?? 'user'
       }
       return token
