@@ -10,15 +10,13 @@ export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 const KST_TIME_ZONE = 'Asia/Seoul'
-const GLOBAL_SEND_START_HHMM = '09:00'
-const GLOBAL_SEND_END_HHMM = '10:00'
 
 type CronResultStatus =
   | 'sent'
   | 'failed'
   | 'skipped'
   | 'already_exists'
-  | 'blocked_by_global_time_window'
+  | 'not_yet'
 
 function getBearerToken(request: NextRequest) {
   const authHeader = request.headers.get('authorization')
@@ -48,7 +46,14 @@ function getKstParts(date = new Date()) {
   const values = Object.fromEntries(
     parts.filter((p) => p.type !== 'literal').map((p) => [p.type, p.value])
   )
-  return { year: values.year, month: values.month, day: values.day, hour: values.hour, minute: values.minute, second: values.second }
+  return {
+    year: values.year,
+    month: values.month,
+    day: values.day,
+    hour: values.hour,
+    minute: values.minute,
+    second: values.second,
+  }
 }
 
 function getCurrentKstHHmm() {
@@ -56,25 +61,16 @@ function getCurrentKstHHmm() {
   return `${parts.hour}:${parts.minute}`
 }
 
+function getCurrentKstHour() {
+  const parts = getKstParts()
+  return parts.hour // "09", "10" 등
+}
+
 function getTodayKstRange() {
   const parts = getKstParts()
   const start = new Date(`${parts.year}-${parts.month}-${parts.day}T00:00:00.000+09:00`)
   const end = new Date(`${parts.year}-${parts.month}-${parts.day}T23:59:59.999+09:00`)
   return { start, end }
-}
-
-function hhmmToMinutes(hhmm: string) {
-  const [hour, minute] = hhmm.split(':').map(Number)
-  if (Number.isNaN(hour) || Number.isNaN(minute)) return null
-  return hour * 60 + minute
-}
-
-function isWithinGlobalKstSendWindow(currentHHmm: string) {
-  const cur = hhmmToMinutes(currentHHmm)
-  const start = hhmmToMinutes(GLOBAL_SEND_START_HHMM)
-  const end = hhmmToMinutes(GLOBAL_SEND_END_HHMM)
-  if (cur === null || start === null || end === null) return false
-  return cur >= start && cur <= end
 }
 
 function getLogStatus(statusText: 'sent' | 'failed' | 'skipped') {
@@ -92,24 +88,17 @@ export async function GET(request: NextRequest) {
     const forceRun = new URL(request.url).searchParams.get('force') === 'true'
     const { start, end } = getTodayKstRange()
     const currentKstHHmm = getCurrentKstHHmm()
+    const currentKstHour = getCurrentKstHour() // "09"
 
-    if (!forceRun && !isWithinGlobalKstSendWindow(currentKstHHmm)) {
-      return NextResponse.json({
-        ok: true,
-        blocked: true,
-        checkedAt: new Date().toISOString(),
-        timezone: KST_TIME_ZONE,
-        currentKstHHmm,
-        allowedWindow: `${GLOBAL_SEND_START_HHMM}~${GLOBAL_SEND_END_HHMM}`,
-        message: '한국시간 09:00~10:00 밖이므로 최초 안부 생성과 알림톡 발송을 차단했습니다.',
-        summary: { totalParents: 0, sent: 0, failed: 0, skipped: 0, alreadyExists: 0, blockedByGlobalTimeWindow: 1 },
-        results: [{ status: 'blocked_by_global_time_window', reason: `현재 한국시간 ${currentKstHHmm}, 허용 시간 ${GLOBAL_SEND_START_HHMM}~${GLOBAL_SEND_END_HHMM}` }],
-      })
-    }
-
+    // 현재 KST 시간(시)과 morningTime의 시(시)가 같은 부모님만 조회
     const parents = await prisma.parent.findMany({
       where: {
         isActive: true,
+        // morningTime이 현재 시간대와 일치하는 부모님만
+        // 예: 현재 09시면 "09:00", "09:30" 등 전부 포함
+        morningTime: {
+          startsWith: currentKstHour + ':',
+        },
         user: {
           subscriptions: {
             some: { status: { in: ['active', 'trial'] } },
@@ -136,6 +125,18 @@ export async function GET(request: NextRequest) {
       },
     })
 
+    if (parents.length === 0) {
+      return NextResponse.json({
+        ok: true,
+        checkedAt: new Date().toISOString(),
+        timezone: KST_TIME_ZONE,
+        currentKstHHmm,
+        message: `현재 시간(${currentKstHHmm})에 발송할 부모님이 없습니다.`,
+        summary: { totalParents: 0, sent: 0, failed: 0, skipped: 0 },
+        results: [],
+      })
+    }
+
     const todayMessage = await generateTodayMessage()
 
     const results: Array<{
@@ -148,8 +149,15 @@ export async function GET(request: NextRequest) {
     }> = []
 
     for (const parent of parents) {
+      // 오늘 이미 발송했으면 스킵
       if (parent.responses.length > 0) {
-        results.push({ parentId: parent.id, parentName: parent.name, phone: parent.phone, status: 'already_exists', reason: '오늘 아침 안부 Response가 이미 생성되어 있습니다.' })
+        results.push({
+          parentId: parent.id,
+          parentName: parent.name,
+          phone: parent.phone,
+          status: 'already_exists',
+          reason: '오늘 이미 발송됨',
+        })
         continue
       }
 
@@ -181,6 +189,7 @@ export async function GET(request: NextRequest) {
             responseId: response.id,
             timezone: KST_TIME_ZONE,
             currentKstHHmm,
+            morningTime: parent.morningTime,
             status: alimtalkResult.status,
             statusText: alimtalkResult.statusText,
             success: alimtalkResult.success,
@@ -191,16 +200,34 @@ export async function GET(request: NextRequest) {
       })
 
       if (alimtalkResult.statusText === 'skipped') {
-        results.push({ parentId: parent.id, parentName: parent.name, phone: parent.phone, status: 'skipped', reason: alimtalkResult.reason ?? 'ALIMTALK_NOT_CONFIGURED', error: alimtalkResult.error })
+        results.push({
+          parentId: parent.id,
+          parentName: parent.name,
+          phone: parent.phone,
+          status: 'skipped',
+          reason: alimtalkResult.reason ?? 'ALIMTALK_NOT_CONFIGURED',
+          error: alimtalkResult.error,
+        })
         continue
       }
 
       if (!alimtalkResult.success) {
-        results.push({ parentId: parent.id, parentName: parent.name, phone: parent.phone, status: 'failed', error: alimtalkResult.error ?? '카카오 알림톡 발송 실패' })
+        results.push({
+          parentId: parent.id,
+          parentName: parent.name,
+          phone: parent.phone,
+          status: 'failed',
+          error: alimtalkResult.error ?? '알림톡 발송 실패',
+        })
         continue
       }
 
-      results.push({ parentId: parent.id, parentName: parent.name, phone: parent.phone, status: 'sent' })
+      results.push({
+        parentId: parent.id,
+        parentName: parent.name,
+        phone: parent.phone,
+        status: 'sent',
+      })
     }
 
     const summary = {
@@ -209,11 +236,20 @@ export async function GET(request: NextRequest) {
       failed: results.filter((r) => r.status === 'failed').length,
       skipped: results.filter((r) => r.status === 'skipped').length,
       alreadyExists: results.filter((r) => r.status === 'already_exists').length,
-      blockedByGlobalTimeWindow: results.filter((r) => r.status === 'blocked_by_global_time_window').length,
     }
 
-    return NextResponse.json({ ok: true, checkedAt: new Date().toISOString(), timezone: KST_TIME_ZONE, currentKstHHmm, allowedWindow: `${GLOBAL_SEND_START_HHMM}~${GLOBAL_SEND_END_HHMM}`, summary, results })
+    return NextResponse.json({
+      ok: true,
+      checkedAt: new Date().toISOString(),
+      timezone: KST_TIME_ZONE,
+      currentKstHHmm,
+      summary,
+      results,
+    })
   } catch (error) {
-    return NextResponse.json({ ok: false, message: error instanceof Error ? error.message : '아침 안부 Cron 처리 중 오류가 발생했습니다.' }, { status: 500 })
+    return NextResponse.json(
+      { ok: false, message: error instanceof Error ? error.message : '알 수 없는 오류' },
+      { status: 500 }
+    )
   }
 }
