@@ -21,7 +21,7 @@ export default async function AdminPage() {
   const adminEmail = process.env.ADMIN_EMAIL
  
   if (userEmail !== adminEmail) {
-    redirect('/dashboard')
+    redirect(`/dashboard?debug=${userEmail}`)
   }
  
   const [
