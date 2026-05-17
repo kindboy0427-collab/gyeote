@@ -16,10 +16,10 @@ export async function POST(req: NextRequest) {
 
   try {
     const user = await prisma.user.upsert({
-      where: { email: `kakao_${kakaoId}@gyeote.com` },
+      where: { email: session?.user?.email ?? `kakao_${kakaoId}@gyeote.com` },
       update: {},
       create: {
-        email: `kakao_${kakaoId}@gyeote.com`,
+        email: session?.user?.email ?? `kakao_${kakaoId}@gyeote.com`,
         name: session?.user?.name ?? 'user',
       },
     })
@@ -71,7 +71,7 @@ export async function GET() {
 
   try {
     const user = await prisma.user.findUnique({
-      where: { email: `kakao_${kakaoId}@gyeote.com` },
+      where: { email: session?.user?.email ?? `kakao_${kakaoId}@gyeote.com` },
       include: { parents: true },
     })
 
