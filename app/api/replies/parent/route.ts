@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           ok: false,
-          message: '요청 본문이 없습니다.',
+          message: '?�청 본문???�습?�다.',
         },
         { status: 400 }
       )
@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           ok: false,
-          message: 'parentId가 필요합니다.',
+          message: 'parentId가 ?�요?�니??',
         },
         { status: 400 }
       )
@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           ok: false,
-          message: '답장 내용이 필요합니다.',
+          message: '?�장 ?�용???�요?�니??',
         },
         { status: 400 }
       )
@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           ok: false,
-          message: '부모님 정보를 찾을 수 없습니다.',
+          message: '부모님 ?�보�?찾을 ???�습?�다.',
         },
         { status: 404 }
       )
@@ -130,7 +130,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       ok: true,
-      message: '부모님 답장이 저장되었습니다.',
+      message: '부모님 ?�장???�?�되?�습?�다.',
       parent: {
         id: parent.id,
         name: parent.name,
@@ -144,7 +144,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         ok: false,
-        message: '부모님 답장 저장 중 오류가 발생했습니다.',
+        message: '부모님 ?�장 ?�??�??�류가 발생?�습?�다.',
       },
       { status: 500 }
     )

@@ -14,7 +14,7 @@ function getRequiredEnv(name: string) {
   const value = process.env[name]
 
   if (!value) {
-    throw new Error(`${name} 환경변수가 설정되지 않았습니다.`)
+    throw new Error(`${name} ?�경변?��? ?�정?��? ?�았?�니??`)
   }
 
   return value
@@ -52,21 +52,21 @@ export async function POST(req: NextRequest) {
 
     if (!isPlanId(rawPlan)) {
       return NextResponse.json(
-        { error: '유효하지 않은 구독 상품입니다.' },
+        { error: '?�효?��? ?��? 구독 ?�품?�니??' },
         { status: 400 }
       )
     }
 
     if (!pgToken || typeof pgToken !== 'string') {
       return NextResponse.json(
-        { error: 'pgToken이 필요합니다.' },
+        { error: 'pgToken???�요?�니??' },
         { status: 400 }
       )
     }
 
     if (!orderId || typeof orderId !== 'string') {
       return NextResponse.json(
-        { error: 'orderId가 필요합니다.' },
+        { error: 'orderId가 ?�요?�니??' },
         { status: 400 }
       )
     }
@@ -77,7 +77,7 @@ export async function POST(req: NextRequest) {
     const user = await prisma.user.findFirst({
       where: {
         OR: [
-          { email: `kakao_${kakaoId}@gyeote.com` },
+          { email: session?.user?.email ?? `kakao_${kakaoId}@gyeote.com` },
           { email: sessionEmail },
         ],
       },
@@ -85,7 +85,7 @@ export async function POST(req: NextRequest) {
 
     if (!user) {
       return NextResponse.json(
-        { error: '사용자를 찾을 수 없습니다.' },
+        { error: '?�용?��? 찾을 ???�습?�다.' },
         { status: 404 }
       )
     }
@@ -96,7 +96,7 @@ export async function POST(req: NextRequest) {
 
     if (!subscription || !subscription.tid) {
       return NextResponse.json(
-        { error: '카카오페이 결제 준비 정보가 없습니다.' },
+        { error: '카카?�페??결제 준�??�보가 ?�습?�다.' },
         { status: 400 }
       )
     }
@@ -131,7 +131,7 @@ export async function POST(req: NextRequest) {
             data?.error_message ||
             data?.msg ||
             data?.message ||
-            '카카오페이 결제 승인에 실패했습니다.',
+            '카카?�페??결제 ?�인???�패?�습?�다.',
           data,
         },
         { status: 502 }
@@ -183,7 +183,7 @@ export async function POST(req: NextRequest) {
         error:
           error instanceof Error
             ? error.message
-            : '카카오페이 결제 승인 중 오류가 발생했습니다.',
+            : '카카?�페??결제 ?�인 �??�류가 발생?�습?�다.',
       },
       { status: 500 }
     )

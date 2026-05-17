@@ -6,22 +6,22 @@ export async function POST(req: NextRequest) {
     const { phone, content, rating } = await req.json()
 
     if (!phone || !content) {
-      return NextResponse.json({ error: '전화번호와 후기 내용이 필요합니다.' }, { status: 400 })
+      return NextResponse.json({ error: '?�화번호?� ?�기 ?�용???�요?�니??' }, { status: 400 })
     }
 
-    // 전화번호로 부모님 찾기
+    // ?�화번호�?부모님 찾기
     const parent = await prisma.parent.findFirst({
       where: { phone: phone.replace(/-/g, '') },
       include: { user: { include: { subscriptions: true } } },
     })
 
     if (!parent) {
-      return NextResponse.json({ error: '등록된 부모님을 찾을 수 없습니다.' }, { status: 404 })
+      return NextResponse.json({ error: '?�록??부모님??찾을 ???�습?�다.' }, { status: 404 })
     }
 
     const user = parent.user
 
-    // 후기 저장
+    // ?�기 ?�??
     await prisma.review.create({
       data: {
         userId: user.id,
@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
       },
     })
 
-    // 구독 1주일 연장
+    // 구독 1주일 ?�장
     const subscription = user.subscriptions.find(
       (s) => s.status === 'trial' || s.status === 'active'
     )

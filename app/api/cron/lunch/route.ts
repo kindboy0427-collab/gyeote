@@ -65,9 +65,9 @@ function isWithinSendWindow(currentHHmm: string) {
 
 function createLunchMessage(parentName: string, todayMessage: string, hasMedication: boolean) {
   if (hasMedication) {
-    return `${parentName}님, 점심은 챙겨 드셨나요? 🍚\n\n${todayMessage}\n\n오늘 약은 드셨나요? 💊\n작은 습관이 건강을 지켜드린답니다.\n잊지 말고 꼭 챙겨 드세요 🙏\n\n항상 당신 곁에 있을게요.\n- 곁에`
+    return `${parentName}?? ?�심?� 챙겨 ?�셨?�요? ?��\n\n${todayMessage}\n\n?�늘 ?��? ?�셨?�요? ?��\n?��? ?��???건강??지켜드린답?�다.\n?��? 말고 �?챙겨 ?�세???��\n\n??�� ?�신 곁에 ?�을게요.\n- 곁에`
   }
-  return `${parentName}님, 점심은 챙겨 드셨나요? 🍚\n\n${todayMessage}\n\n맛있는 거 드시고 오후도 건강하게 보내세요 😊\n\n항상 당신 곁에 있을게요.\n- 곁에`
+  return `${parentName}?? ?�심?� 챙겨 ?�셨?�요? ?��\n\n${todayMessage}\n\n맛있??�??�시�??�후??건강?�게 보내?�요 ?��\n\n??�� ?�신 곁에 ?�을게요.\n- 곁에`
 }
 
 export async function GET(request: NextRequest) {
@@ -83,7 +83,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({
         ok: true,
         blocked: true,
-        message: `점심 알림 허용 시간(${SEND_START_HHMM}~${SEND_END_HHMM}) 밖입니다.`,
+        message: `?�심 ?�림 ?�용 ?�간(${SEND_START_HHMM}~${SEND_END_HHMM}) 밖입?�다.`,
         currentKstHHmm,
       })
     }
@@ -160,7 +160,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ ok: true, currentKstHHmm, results })
   } catch (error) {
     return NextResponse.json(
-      { ok: false, message: error instanceof Error ? error.message : '점심 크론 오류' },
+      { ok: false, message: error instanceof Error ? error.message : '?�심 ?�론 ?�류' },
       { status: 500 }
     )
   }

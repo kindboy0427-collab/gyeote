@@ -17,7 +17,7 @@ export async function DELETE(
   const user = await prisma.user.findFirst({
     where: {
       OR: [
-        { email: `kakao_${kakaoId}@gyeote.com` },
+        { email: session?.user?.email ?? `kakao_${kakaoId}@gyeote.com` },
         { email: session.user?.email ?? '' },
       ],
     },

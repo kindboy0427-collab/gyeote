@@ -105,7 +105,7 @@ export async function GET(request: NextRequest) {
         message:
           error instanceof Error
             ? error.message
-            : '카카오 알림톡 로그 조회 중 오류가 발생했습니다.',
+            : '카카???�림??로그 조회 �??�류가 발생?�습?�다.',
       },
       { status: 500 }
     )
@@ -160,7 +160,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(
           {
             ok: false,
-            message: '부모님 정보를 찾을 수 없습니다.',
+            message: '부모님 ?�보�?찾을 ???�습?�다.',
           },
           { status: 404 }
         )
@@ -175,14 +175,14 @@ export async function POST(request: NextRequest) {
         {
           ok: false,
           message:
-            'parentId 또는 to, parentName 값이 필요합니다.',
+            'parentId ?�는 to, parentName 값이 ?�요?�니??',
         },
         { status: 400 }
       )
     }
 
     const message =
-  directMessage ?? createMorningAlimtalkMessage(parentName, '오늘 하루도 건강하게 보내세요 😊')
+  directMessage ?? createMorningAlimtalkMessage(parentName, '?�늘 ?�루??건강?�게 보내?�요 ?��')
 
     const result = await sendKakaoAlimtalk({
       to,
@@ -222,7 +222,7 @@ export async function POST(request: NextRequest) {
         skipped: true,
         reason: result.reason ?? 'ALIMTALK_NOT_CONFIGURED',
         message:
-          '카카오 알림톡 설정값이 없어 발송을 건너뛰었습니다.',
+          '카카???�림???�정값이 ?�어 발송??건너?�었?�니??',
         result,
       })
     }
@@ -233,7 +233,7 @@ export async function POST(request: NextRequest) {
           ok: false,
           sent: false,
           skipped: false,
-          message: result.error ?? '카카오 알림톡 발송에 실패했습니다.',
+          message: result.error ?? '카카???�림??발송???�패?�습?�다.',
           result,
         },
         { status: 502 }
@@ -244,7 +244,7 @@ export async function POST(request: NextRequest) {
       ok: true,
       sent: true,
       skipped: false,
-      message: '카카오 알림톡 발송 요청이 완료되었습니다.',
+      message: '카카???�림??발송 ?�청???�료?�었?�니??',
       result,
     })
   } catch (error) {
@@ -254,7 +254,7 @@ export async function POST(request: NextRequest) {
         message:
           error instanceof Error
             ? error.message
-            : '카카오 알림톡 발송 API 처리 중 오류가 발생했습니다.',
+            : '카카???�림??발송 API 처리 �??�류가 발생?�습?�다.',
       },
       { status: 500 }
     )

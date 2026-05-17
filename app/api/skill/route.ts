@@ -9,9 +9,9 @@ export async function POST(req: NextRequest) {
     const utterance = userRequest?.utterance ?? ''
     const kakaoId = userRequest?.user?.id ?? ''
 
-    // 사용자 찾기
+    // ?�용??찾기
     const user = await prisma.user.findFirst({
-      where: { email: `kakao_${kakaoId}@gyeote.com` },
+      where: { email: session?.user?.email ?? `kakao_${kakaoId}@gyeote.com` },
       include: { subscriptions: true },
     })
 
@@ -19,12 +19,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({
         version: '2.0',
         template: {
-          outputs: [{ simpleText: { text: '등록된 사용자를 찾을 수 없어요.' } }],
+          outputs: [{ simpleText: { text: '?�록???�용?��? 찾을 ???�어??' } }],
         },
       })
     }
 
-    // 후기 저장
+    // ?�기 ?�??
     await prisma.review.create({
       data: {
         userId: user.id,
@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
       },
     })
 
-    // 구독 1주일 연장
+    // 구독 1주일 ?�장
     const subscription = user.subscriptions.find(
       (s) => s.status === 'trial' || s.status === 'active'
     )
@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
         outputs: [
           {
             simpleText: {
-              text: '소중한 후기 감사합니다 😊\n7일 무료 연장이 완료됐어요 🎁',
+              text: '?�중???�기 감사?�니???��\n7??무료 ?�장???�료?�어???��',
             },
           },
         ],
@@ -65,7 +65,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       version: '2.0',
       template: {
-        outputs: [{ simpleText: { text: '오류가 발생했어요. 다시 시도해주세요.' } }],
+        outputs: [{ simpleText: { text: '?�류가 발생?�어?? ?�시 ?�도?�주?�요.' } }],
       },
     })
   }

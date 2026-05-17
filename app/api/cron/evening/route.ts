@@ -73,11 +73,11 @@ function isFriday() {
 }
 
 function createEveningMessage(parentName: string, todayMessage: string) {
-  return `${parentName}님, 오늘 하루도 정말 수고 많으셨어요 🌙\n\n${todayMessage}\n\n매일 건강하게 계셔주시는 것만으로도\n곁에 있는 우리 모두가 행복해요 💖\n\n항상 당신 곁에 있을게요.\n- 곁에`
+  return `${parentName}?? ?�늘 ?�루???�말 ?�고 많으?�어???��\n\n${todayMessage}\n\n매일 건강?�게 계셔주시??것만?�로??n곁에 ?�는 ?�리 모두가 ?�복?�요 ?��\n\n??�� ?�신 곁에 ?�을게요.\n- 곁에`
 }
 
 function createFridayEveningMessage(parentName: string, todayMessage: string) {
-  return `${parentName}님, 한 주 동안 정말 수고 많으셨어요 🌙\n\n${todayMessage}\n\n자녀분께 전하고 싶은 말씀이 있으신가요? 😊\n때로는 얼굴을 마주하지 않고 글로 진심을 전하는 게\n더 깊게 와닿을 때가 있더라구요.\n\n짧은 한 마디도 괜찮아요.\n매주 금요일, 곁에가 자녀분께 전달해 드릴게요 💌\n\n항상 당신 곁에 있을게요.\n- 곁에`
+  return `${parentName}?? ??�??�안 ?�말 ?�고 많으?�어???��\n\n${todayMessage}\n\n?��?분께 ?�하�??��? 말�????�으?��??? ?��\n?�로???�굴??마주?��? ?�고 글�?진심???�하??�?n??깊게 ?�?�을 ?��? ?�더?�구??\n\n짧�? ??마디??괜찮?�요.\n매주 금요?? 곁에가 ?��?분께 ?�달???�릴게요 ?��\n\n??�� ?�신 곁에 ?�을게요.\n- 곁에`
 }
 
 export async function GET(request: NextRequest) {
@@ -94,7 +94,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({
         ok: true,
         blocked: true,
-        message: `저녁 알림 허용 시간(${SEND_START_HHMM}~${SEND_END_HHMM}) 밖입니다.`,
+        message: `?�???�림 ?�용 ?�간(${SEND_START_HHMM}~${SEND_END_HHMM}) 밖입?�다.`,
         currentKstHHmm,
       })
     }
@@ -175,7 +175,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ ok: true, currentKstHHmm, friday, results })
   } catch (error) {
     return NextResponse.json(
-      { ok: false, message: error instanceof Error ? error.message : '저녁 크론 오류' },
+      { ok: false, message: error instanceof Error ? error.message : '?�???�론 ?�류' },
       { status: 500 }
     )
   }

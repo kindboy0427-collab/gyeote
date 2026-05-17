@@ -18,7 +18,7 @@ function getRequiredEnv(name: string) {
   const value = process.env[name]
 
   if (!value) {
-    throw new Error(`${name} 환경변수가 설정되지 않았습니다.`)
+    throw new Error(`${name} ?�경변?��? ?�정?��? ?�았?�니??`)
   }
 
   return value
@@ -52,21 +52,21 @@ export async function POST(req: NextRequest) {
 
     if (!isPlanId(rawPlan)) {
       return NextResponse.json(
-        { error: '유효하지 않은 구독 상품입니다.' },
+        { error: '?�효?��? ?��? 구독 ?�품?�니??' },
         { status: 400 }
       )
     }
 
     if (!authKey || typeof authKey !== 'string') {
       return NextResponse.json(
-        { error: 'authKey가 필요합니다.' },
+        { error: 'authKey가 ?�요?�니??' },
         { status: 400 }
       )
     }
 
     if (!customerKey || typeof customerKey !== 'string') {
       return NextResponse.json(
-        { error: 'customerKey가 필요합니다.' },
+        { error: 'customerKey가 ?�요?�니??' },
         { status: 400 }
       )
     }
@@ -77,7 +77,7 @@ export async function POST(req: NextRequest) {
     const user = await prisma.user.findFirst({
       where: {
         OR: [
-          { email: `kakao_${kakaoId}@gyeote.com` },
+          { email: session?.user?.email ?? `kakao_${kakaoId}@gyeote.com` },
           { email: sessionEmail },
         ],
       },
@@ -85,7 +85,7 @@ export async function POST(req: NextRequest) {
 
     if (!user) {
       return NextResponse.json(
-        { error: '사용자를 찾을 수 없습니다.' },
+        { error: '?�용?��? 찾을 ???�습?�다.' },
         { status: 404 }
       )
     }
@@ -112,7 +112,7 @@ export async function POST(req: NextRequest) {
           error:
             data?.message ||
             data?.error ||
-            '토스 자동결제 빌링키 발급에 실패했습니다.',
+            '?�스 ?�동결제 빌링??발급???�패?�습?�다.',
           data,
         },
         { status: 502 }
@@ -164,7 +164,7 @@ export async function POST(req: NextRequest) {
         error:
           error instanceof Error
             ? error.message
-            : '토스 자동결제 등록 중 오류가 발생했습니다.',
+            : '?�스 ?�동결제 ?�록 �??�류가 발생?�습?�다.',
       },
       { status: 500 }
     )

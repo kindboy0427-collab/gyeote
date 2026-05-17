@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ ok: false, message: 'Unauthorized' }, { status: 401 })
     }
 
-    // 내일 만료되는 trial 구독 찾기
+    // ?�일 만료?�는 trial 구독 찾기
     const tomorrow = new Date()
     tomorrow.setDate(tomorrow.getDate() + 1)
     const tomorrowStart = new Date(tomorrow)
@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
         const alimtalkResult = await sendKakaoAlimtalk({
           to: parent.phone,
           parentName: parent.name,
-          message: '후기를 남겨주시면 1주일 무료 연장해드려요 😊',
+          message: '?�기�??�겨주시�?1주일 무료 ?�장?�드?�요 ?��',
           templateCode: process.env.KAKAO_ALIMTALK_TEMPLATE_CODE_REVIEW,
         })
 
@@ -71,7 +71,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ ok: true, total: subscriptions.length, results })
   } catch (error) {
     return NextResponse.json(
-      { ok: false, message: error instanceof Error ? error.message : '알 수 없는 오류' },
+      { ok: false, message: error instanceof Error ? error.message : '?????�는 ?�류' },
       { status: 500 }
     )
   }

@@ -7,11 +7,11 @@ type PlanId = 'monthly' | 'yearly'
 
 const PLAN_CONFIG: Record<PlanId, { name: string; price: number }> = {
   monthly: {
-    name: '곁에 월간 구독',
+    name: '곁에 ?�간 구독',
     price: 4900,
   },
   yearly: {
-    name: '곁에 연간 구독',
+    name: '곁에 ?�간 구독',
     price: 50000,
   },
 }
@@ -20,7 +20,7 @@ function getRequiredEnv(name: string) {
   const value = process.env[name]
 
   if (!value) {
-    throw new Error(`${name} 환경변수가 설정되지 않았습니다.`)
+    throw new Error(`${name} ?�경변?��? ?�정?��? ?�았?�니??`)
   }
 
   return value
@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
 
     if (!isPlanId(rawPlan)) {
       return NextResponse.json(
-        { error: '유효하지 않은 구독 상품입니다.' },
+        { error: '?�효?��? ?��? 구독 ?�품?�니??' },
         { status: 400 }
       )
     }
@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
     const user = await prisma.user.findFirst({
       where: {
         OR: [
-          { email: `kakao_${kakaoId}@gyeote.com` },
+          { email: session?.user?.email ?? `kakao_${kakaoId}@gyeote.com` },
           { email: sessionEmail },
         ],
       },
@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
 
     if (!user) {
       return NextResponse.json(
-        { error: '사용자를 찾을 수 없습니다.' },
+        { error: '?�용?��? 찾을 ???�습?�다.' },
         { status: 404 }
       )
     }
@@ -123,7 +123,7 @@ export async function POST(req: NextRequest) {
             data?.error_message ||
             data?.msg ||
             data?.message ||
-            '카카오페이 결제 준비에 실패했습니다.',
+            '카카?�페??결제 준비에 ?�패?�습?�다.',
           data,
         },
         { status: 502 }
@@ -170,7 +170,7 @@ export async function POST(req: NextRequest) {
         error:
           error instanceof Error
             ? error.message
-            : '카카오페이 결제 준비 중 오류가 발생했습니다.',
+            : '카카?�페??결제 준�?�??�류가 발생?�습?�다.',
       },
       { status: 500 }
     )

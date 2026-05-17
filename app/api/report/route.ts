@@ -21,13 +21,13 @@ export async function POST(req: NextRequest) {
     const daysBack = type === 'monthly' ? 30 : 7
     const from = new Date(now.getTime() - daysBack * 24 * 60 * 60 * 1000)
 
-    // 대화 히스토리 가져오기
+    // ?�???�스?�리 가?�오�?
     const messages = await prisma.message.findMany({
       where: { parentId, createdAt: { gte: from } },
       orderBy: { createdAt: 'asc' },
     })
 
-    // 응답 기록 가져오기
+    // ?�답 기록 가?�오�?
     const responses = await prisma.response.findMany({
       where: { parentId, date: { gte: from } },
     })
@@ -39,31 +39,31 @@ export async function POST(req: NextRequest) {
       .map(m => `${m.role === 'user' ? '부모님' : 'AI'}: ${m.content}`)
       .join('\n')
 
-    // Claude API로 리포트 생성
+    // Claude API�?리포???�성
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 1000,
-      system: '당신은 고령자 케어 전문가예요. 대화 내용을 분석해서 자녀에게 부모님 상태 리포트를 작성해주세요. 따뜻하고 명확하게 작성하세요.',
+      system: '?�신?� 고령??케???�문가?�요. ?�???�용??분석?�서 ?��??�게 부모님 ?�태 리포?��? ?�성?�주?�요. ?�뜻?�고 명확?�게 ?�성?�세??',
       messages: [{
         role: 'user',
-        content: `${parent?.name}님의 ${type === 'monthly' ? '월간' : '주간'} 리포트를 작성해주세요.
+        content: `${parent?.name}?�의 ${type === 'monthly' ? '?�간' : '주간'} 리포?��? ?�성?�주?�요.
 
-응답률: ${totalCount > 0 ? Math.round((respondedCount / totalCount) * 100) : 0}% (${respondedCount}/${totalCount})
+?�답�? ${totalCount > 0 ? Math.round((respondedCount / totalCount) * 100) : 0}% (${respondedCount}/${totalCount})
 
-대화 내용:
-${conversationSummary || '대화 기록 없음'}
+?�???�용:
+${conversationSummary || '?�??기록 ?�음'}
 
-다음 항목을 포함해주세요:
-1. 전반적인 상태 요약
-2. 건강 관련 언급 사항
-3. 응답 패턴 분석
-4. 자녀에게 전하는 한마디`,
+?�음 ??��???�함?�주?�요:
+1. ?�반?�인 ?�태 ?�약
+2. 건강 관???�급 ?�항
+3. ?�답 ?�턴 분석
+4. ?��??�게 ?�하???�마??,
       }],
     })
 
     const content = response.content[0].type === 'text' ? response.content[0].text : ''
 
-    // 리포트 저장
+    // 리포???�??
     const report = await prisma.report.create({
       data: {
         parentId,

@@ -6,9 +6,9 @@ export const runtime = 'nodejs'
 
 const KST_TIME_ZONE = 'Asia/Seoul'
 
-// ─────────────────────────────────────────
-// 타입
-// ─────────────────────────────────────────
+// ?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�
+// ?�??
+// ?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�
 
 type SolapiInboundBody =
   | {
@@ -26,9 +26,9 @@ type SolapiInboundBody =
       text?: string
     }
 
-// ─────────────────────────────────────────
-// 유틸
-// ─────────────────────────────────────────
+// ?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�
+// ?�틸
+// ?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�
 
 function normalizePhone(phone: string): string {
   return phone.replace(/[^0-9]/g, '')
@@ -97,9 +97,9 @@ function parsePayload(body: SolapiInboundBody): {
   return { fromPhone: null, text: '', messageId: '' }
 }
 
-// ─────────────────────────────────────────
-// GET: 솔라피 웹훅 등록 시 연결 확인용
-// ─────────────────────────────────────────
+// ?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�
+// GET: ?�라???�훅 ?�록 ???�결 ?�인??
+// ?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�
 
 export async function GET(request: NextRequest) {
   const challenge = request.nextUrl.searchParams.get('challenge')
@@ -109,22 +109,22 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({ ok: true, message: 'Kakao webhook is alive.' })
 }
 
-// ─────────────────────────────────────────
-// POST: 솔라피 → 부모님 답장 수신
-// ─────────────────────────────────────────
+// ?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�
+// POST: ?�라????부모님 ?�장 ?�신
+// ?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�
 
 export async function POST(request: NextRequest) {
-  // 1. 쿼리 파라미터로 시크릿 검증
+  // 1. 쿼리 ?�라미터�??�크�?검�?
   const webhookSecret = process.env.WEBHOOK_SECRET
   if (webhookSecret) {
     const token = request.nextUrl.searchParams.get('secret')
     if (!token || token !== webhookSecret) {
-      console.warn('[KAKAO_WEBHOOK] 인증 실패 - 잘못된 secret')
+      console.warn('[KAKAO_WEBHOOK] ?�증 ?�패 - ?�못??secret')
       return NextResponse.json({ ok: false, message: 'Unauthorized' }, { status: 401 })
     }
   }
 
-  // 2. JSON 파싱
+  // 2. JSON ?�싱
   let body: SolapiInboundBody
   try {
     body = await request.json()
@@ -135,21 +135,21 @@ export async function POST(request: NextRequest) {
   const { fromPhone, text, messageId } = parsePayload(body)
 
   if (!fromPhone) {
-    console.warn('[KAKAO_WEBHOOK] 발신자 번호 없음')
-    return NextResponse.json({ ok: true, message: 'No sender phone — ignored' })
+    console.warn('[KAKAO_WEBHOOK] 발신??번호 ?�음')
+    return NextResponse.json({ ok: true, message: 'No sender phone ??ignored' })
   }
 
   const normalizedPhone = normalizePhone(fromPhone)
 
-  // 3. 전화번호로 부모님 조회
+  // 3. ?�화번호�?부모님 조회
   const parent = await prisma.parent.findFirst({
     where: { phone: normalizedPhone },
     select: { id: true, name: true, phone: true, userId: true },
   })
 
   if (!parent) {
-    console.log(`[KAKAO_WEBHOOK] 매칭되는 부모님 없음: ${normalizedPhone}`)
-    return NextResponse.json({ ok: true, message: 'No matched parent — ignored' })
+    console.log(`[KAKAO_WEBHOOK] 매칭?�는 부모님 ?�음: ${normalizedPhone}`)
+    return NextResponse.json({ ok: true, message: 'No matched parent ??ignored' })
   }
 
   const now = new Date()
@@ -157,7 +157,7 @@ export async function POST(request: NextRequest) {
   const responseType = inferResponseType(kstHour)
   const { start, end } = getTodayKstRange()
 
-  // 4. 오늘 Response 조회 → upsert
+  // 4. ?�늘 Response 조회 ??upsert
   const existing = await prisma.response.findFirst({
     where: {
       parentId: parent.id,
@@ -187,7 +187,7 @@ export async function POST(request: NextRequest) {
         },
       })
 
-  // 5. 수신 로그 기록 (reply-check 크론 판단용)
+  // 5. ?�신 로그 기록 (reply-check ?�론 ?�단??
   await prisma.notificationLog.create({
     data: {
       userId: parent.userId,
@@ -207,7 +207,7 @@ export async function POST(request: NextRequest) {
   })
 
   console.log(
-    `[KAKAO_WEBHOOK] ✅ ${parent.name}(${normalizedPhone}) 답장 수신 [${responseType}]: "${text}"`
+    `[KAKAO_WEBHOOK] ??${parent.name}(${normalizedPhone}) ?�장 ?�신 [${responseType}]: "${text}"`
   )
 
   return NextResponse.json({

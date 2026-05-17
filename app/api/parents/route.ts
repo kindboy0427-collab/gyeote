@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
 
     if (parentCount >= 2) {
       return NextResponse.json(
-        { error: '부모님은 최대 2명까지만 등록할 수 있습니다.' },
+        { error: '부모님?� 최�? 2명까지�??�록?????�습?�다.' },
         { status: 400 }
       )
     }
@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
       },
     })
 
-    const welcomeMessage = `${name}님, 안녕하세요 🌿\n\n자녀분께서 곁에 서비스를 통해\n매일 아침 안부 확인을 시작했어요.\n\n내일 아침부터 매일 안부 메시지를 보내드릴게요.\n아래 버튼을 눌러 채널을 추가하시면\n더 편하게 이용하실 수 있어요.\n\n항상 곁에 있을게요.\n- 곁에`
+    const welcomeMessage = `${name}?? ?�녕?�세???��\n\n?��?분께??곁에 ?�비?��? ?�해\n매일 ?�침 ?��? ?�인???�작?�어??\n\n?�일 ?�침부??매일 ?��? 메시지�?보내?�릴게요.\n?�래 버튼???�러 채널??추�??�시�?n???�하�??�용?�실 ???�어??\n\n??�� 곁에 ?�을게요.\n- 곁에`
 
     await sendKakaoAlimtalk({
       to: phone,

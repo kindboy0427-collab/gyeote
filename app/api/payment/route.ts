@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
     }
 
     const user = await prisma.user.findFirst({
-      where: { email: `kakao_${kakaoId}@gyeote.com` },
+      where: { email: session?.user?.email ?? `kakao_${kakaoId}@gyeote.com` },
     })
     if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 })
 

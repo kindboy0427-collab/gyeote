@@ -16,7 +16,7 @@ export async function POST(_req: NextRequest) {
     const user = await prisma.user.findFirst({
       where: {
         OR: [
-          { email: `kakao_${kakaoId}@gyeote.com` },
+          { email: session?.user?.email ?? `kakao_${kakaoId}@gyeote.com` },
           { email: sessionEmail },
         ],
       },
@@ -27,7 +27,7 @@ export async function POST(_req: NextRequest) {
 
     if (!user) {
       return NextResponse.json(
-        { error: '사용자를 찾을 수 없습니다.' },
+        { error: '?�용?��? 찾을 ???�습?�다.' },
         { status: 404 }
       )
     }
@@ -36,7 +36,7 @@ export async function POST(_req: NextRequest) {
 
     if (!subscription) {
       return NextResponse.json(
-        { error: '구독 정보가 없습니다.' },
+        { error: '구독 ?�보가 ?�습?�다.' },
         { status: 404 }
       )
     }
@@ -44,7 +44,7 @@ export async function POST(_req: NextRequest) {
     if (subscription.status === 'canceled') {
       return NextResponse.json({
         success: true,
-        message: '이미 해지된 구독입니다.',
+        message: '?��? ?��???구독?�니??',
         subscription,
       })
     }
@@ -61,7 +61,7 @@ export async function POST(_req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: '구독이 해지되었습니다. 다음 결제일부터 자동 결제가 중단됩니다.',
+      message: '구독???��??�었?�니?? ?�음 결제?��????�동 결제가 중단?�니??',
       subscription: canceledSubscription,
     })
   } catch (error) {
@@ -71,7 +71,7 @@ export async function POST(_req: NextRequest) {
         error:
           error instanceof Error
             ? error.message
-            : '구독 해지 중 오류가 발생했습니다.',
+            : '구독 ?��? �??�류가 발생?�습?�다.',
       },
       { status: 500 }
     )

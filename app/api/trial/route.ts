@@ -14,13 +14,13 @@ export async function POST(req: NextRequest) {
   const { code } = await req.json()
 
   if (!code || code.toUpperCase() !== BETA_CODE) {
-    return NextResponse.json({ error: '유효하지 않은 초대 코드입니다.' }, { status: 400 })
+    return NextResponse.json({ error: '?�효?��? ?��? 초�? 코드?�니??' }, { status: 400 })
   }
 
   const user = await prisma.user.findFirst({
     where: {
       OR: [
-        { email: `kakao_${kakaoId}@gyeote.com` },
+        { email: session?.user?.email ?? `kakao_${kakaoId}@gyeote.com` },
         { email: session.user?.email ?? '' },
       ],
     },
@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
   const existing = user.subscriptions.find(
     (s) => s.status === 'active'
   )
-  if (existing) return NextResponse.json({ error: '이미 구독 중입니다.' }, { status: 400 })
+  if (existing) return NextResponse.json({ error: '?��? 구독 중입?�다.' }, { status: 400 })
 
   const trialEnd = new Date()
   trialEnd.setDate(trialEnd.getDate() + 7)

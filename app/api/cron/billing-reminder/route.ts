@@ -49,14 +49,14 @@ export async function GET(request: NextRequest) {
       if (!user) continue
 
       const price = sub.price.toLocaleString('ko-KR')
-      const plan = sub.plan?.toLowerCase() === 'yearly' ? '연간' : '월간'
-      const message = `${user.name ?? '사용자'}님, 내일 ${plan} 구독 ${price}원이 자동 결제됩니다 💳\n\n계속 이용하시면 별도 조치 없이 자동으로 결제돼요.\n해지를 원하시면 대시보드에서 언제든지 해지할 수 있어요.\n\n항상 곁에 있을게요.\n- 곁에`
+      const plan = sub.plan?.toLowerCase() === 'yearly' ? '?�간' : '?�간'
+      const message = `${user.name ?? '?�용??}?? ?�일 ${plan} 구독 ${price}?�이 ?�동 결제?�니???��\n\n계속 ?�용?�시�?별도 조치 ?�이 ?�동?�로 결제?�요.\n?��?�??�하?�면 ?�?�보?�에???�제?��? ?��??????�어??\n\n??�� 곁에 ?�을게요.\n- 곁에`
 
       const templateCode = process.env.KAKAO_ALIMTALK_TEMPLATE_CODE_BILLING_REMINDER
 
       const alimtalkResult = await sendKakaoAlimtalk({
         to: user.parents?.[0]?.phone ?? '',
-        parentName: user.name ?? '사용자',
+        parentName: user.name ?? '?�용??,
         message,
         templateCode,
       })
@@ -71,7 +71,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ ok: true, count: subscriptions.length, results })
   } catch (error) {
     return NextResponse.json(
-      { ok: false, message: error instanceof Error ? error.message : '결제 알림 크론 오류' },
+      { ok: false, message: error instanceof Error ? error.message : '결제 ?�림 ?�론 ?�류' },
       { status: 500 }
     )
   }

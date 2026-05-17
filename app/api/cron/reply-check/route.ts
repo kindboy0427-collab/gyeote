@@ -96,11 +96,11 @@ function getElapsedHours(from: Date, to = new Date()) {
 }
 
 function createFollowUpMessage(parentName: string) {
-  return `${parentName}님, 아직 오늘 안부 답장이 확인되지 않았습니다. 괜찮으시면 짧게라도 답장해 주세요.`
+  return `${parentName}?? ?�직 ?�늘 ?��? ?�장???�인?��? ?�았?�니?? 괜찮?�시�?짧게?�도 ?�장??주세??`
 }
 
 function createGuardianAlertMessage(parentName: string) {
-  return `${parentName}님이 오늘 안부 알림 후 3시간이 지나도록 답장하지 않았습니다. 확인이 필요합니다.`
+  return `${parentName}?�이 ?�늘 ?��? ?�림 ??3?�간??지?�도�??�장?��? ?�았?�니?? ?�인???�요?�니??`
 }
 
 function getLogStatus(statusText: 'sent' | 'failed' | 'skipped') {
@@ -209,7 +209,7 @@ export async function GET(request: NextRequest) {
           parentName: parent.name,
           phone: parent.phone,
           status: 'no_response_yet',
-          reason: '오늘 최초 안부 Response가 없습니다.',
+          reason: '?�늘 최초 ?��? Response가 ?�습?�다.',
         })
 
         continue
@@ -222,7 +222,7 @@ export async function GET(request: NextRequest) {
           phone: parent.phone,
           responseId: response.id,
           status: 'responded',
-          reason: '이미 답장 완료 상태입니다.',
+          reason: '?��? ?�장 ?�료 ?�태?�니??',
         })
 
         continue
@@ -249,7 +249,7 @@ export async function GET(request: NextRequest) {
             responseId: response.id,
             elapsedHours,
             status: 'guardian_alert_already_logged',
-            reason: '보호자 알림 필요 로그가 이미 있습니다.',
+            reason: '보호???�림 ?�요 로그가 ?��? ?�습?�다.',
           })
 
           continue
@@ -271,7 +271,7 @@ export async function GET(request: NextRequest) {
               parentName: parent.name,
               elapsedHours,
               reason:
-                '최초 안부 알림톡 발송 후 3시간 초과 + 아직 답장 없음',
+                '최초 ?��? ?�림??발송 ??3?�간 초과 + ?�직 ?�장 ?�음',
             },
           },
         })
@@ -283,7 +283,7 @@ export async function GET(request: NextRequest) {
           responseId: response.id,
           elapsedHours,
           status: 'guardian_alert_required',
-          reason: '최초 안부 후 3시간 초과 + 아직 답장 없음',
+          reason: '최초 ?��? ??3?�간 초과 + ?�직 ?�장 ?�음',
         })
 
         continue
@@ -298,7 +298,7 @@ export async function GET(request: NextRequest) {
             responseId: response.id,
             elapsedHours,
             status: 'follow_up_already_sent',
-            reason: '추가 알림톡이 이미 1회 발송되었습니다.',
+            reason: '추�? ?�림?�이 ?��? 1??발송?�었?�니??',
           })
 
           continue
@@ -360,7 +360,7 @@ export async function GET(request: NextRequest) {
             responseId: response.id,
             elapsedHours,
             status: 'follow_up_failed',
-            error: alimtalkResult.error ?? '추가 알림톡 발송 실패',
+            error: alimtalkResult.error ?? '추�? ?�림??발송 ?�패',
           })
 
           continue
@@ -373,7 +373,7 @@ export async function GET(request: NextRequest) {
           responseId: response.id,
           elapsedHours,
           status: 'follow_up_sent',
-          reason: '최초 안부 후 2시간 초과 + 아직 답장 없음',
+          reason: '최초 ?��? ??2?�간 초과 + ?�직 ?�장 ?�음',
         })
 
         continue
@@ -386,7 +386,7 @@ export async function GET(request: NextRequest) {
         responseId: response.id,
         elapsedHours,
         status: 'no_response_yet',
-        reason: '최초 안부 후 2시간 미만입니다.',
+        reason: '최초 ?��? ??2?�간 미만?�니??',
       })
     }
 
@@ -431,7 +431,7 @@ export async function GET(request: NextRequest) {
         message:
           error instanceof Error
             ? error.message
-            : '답장 확인 Cron 처리 중 오류가 발생했습니다.',
+            : '?�장 ?�인 Cron 처리 �??�류가 발생?�습?�다.',
       },
       { status: 500 }
     )

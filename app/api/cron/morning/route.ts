@@ -63,7 +63,7 @@ function getCurrentKstHHmm() {
 
 function getCurrentKstHour() {
   const parts = getKstParts()
-  return parts.hour // "09", "10" 등
+  return parts.hour // "09", "10" ??
 }
 
 function getTodayKstRange() {
@@ -90,12 +90,12 @@ export async function GET(request: NextRequest) {
     const currentKstHHmm = getCurrentKstHHmm()
     const currentKstHour = getCurrentKstHour() // "09"
 
-    // 현재 KST 시간(시)과 morningTime의 시(시)가 같은 부모님만 조회
+    // ?�재 KST ?�간(??�?morningTime??????가 같�? 부모님�?조회
     const parents = await prisma.parent.findMany({
       where: {
         isActive: true,
-        // morningTime이 현재 시간대와 일치하는 부모님만
-        // 예: 현재 09시면 "09:00", "09:30" 등 전부 포함
+        // morningTime???�재 ?�간?�?� ?�치?�는 부모님�?
+        // ?? ?�재 09?�면 "09:00", "09:30" ???��? ?�함
         morningTime: {
           startsWith: currentKstHour + ':',
         },
@@ -131,7 +131,7 @@ export async function GET(request: NextRequest) {
         checkedAt: new Date().toISOString(),
         timezone: KST_TIME_ZONE,
         currentKstHHmm,
-        message: `현재 시간(${currentKstHHmm})에 발송할 부모님이 없습니다.`,
+        message: `?�재 ?�간(${currentKstHHmm})??발송??부모님???�습?�다.`,
         summary: { totalParents: 0, sent: 0, failed: 0, skipped: 0 },
         results: [],
       })
@@ -149,14 +149,14 @@ export async function GET(request: NextRequest) {
     }> = []
 
     for (const parent of parents) {
-      // 오늘 이미 발송했으면 스킵
+      // ?�늘 ?��? 발송?�으�??�킵
       if (parent.responses.length > 0) {
         results.push({
           parentId: parent.id,
           parentName: parent.name,
           phone: parent.phone,
           status: 'already_exists',
-          reason: '오늘 이미 발송됨',
+          reason: '?�늘 ?��? 발송??,
         })
         continue
       }
@@ -217,7 +217,7 @@ export async function GET(request: NextRequest) {
           parentName: parent.name,
           phone: parent.phone,
           status: 'failed',
-          error: alimtalkResult.error ?? '알림톡 발송 실패',
+          error: alimtalkResult.error ?? '?�림??발송 ?�패',
         })
         continue
       }
@@ -248,7 +248,7 @@ export async function GET(request: NextRequest) {
     })
   } catch (error) {
     return NextResponse.json(
-      { ok: false, message: error instanceof Error ? error.message : '알 수 없는 오류' },
+      { ok: false, message: error instanceof Error ? error.message : '?????�는 ?�류' },
       { status: 500 }
     )
   }

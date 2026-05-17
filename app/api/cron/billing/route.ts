@@ -52,7 +52,7 @@ function getRequiredEnv(name: string) {
 }
 
 function getPlanName(plan: string | null | undefined) {
-  return plan?.toLowerCase() === "yearly" ? "곁에 연간 구독" : "곁에 월간 구독";
+  return plan?.toLowerCase() === "yearly" ? "곁에 ?�간 구독" : "곁에 ?�간 구독";
 }
 
 async function requestKakaoPaySubscriptionPayment(params: {
@@ -204,7 +204,7 @@ async function createBillingLog(params: {
       },
     });
   } catch {
-    // 결제 로그 저장 실패가 자동 청구 자체를 막지 않도록 무시합니다.
+    // 결제 로그 ?�???�패가 ?�동 �?�� ?�체�?막�? ?�도�?무시?�니??
   }
 }
 

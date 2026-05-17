@@ -14,28 +14,28 @@ export async function POST(req: NextRequest) {
   const { parentId, message } = await req.json()
 
   try {
-    // 대화 히스토리 가져오기 (최근 20개)
+    // ?�???�스?�리 가?�오�?(최근 20�?
     const history = await prisma.message.findMany({
       where: { parentId },
       orderBy: { createdAt: 'asc' },
       take: 20,
     })
 
-    // 부모님 정보 가져오기
+    // 부모님 ?�보 가?�오�?
     const parent = await prisma.parent.findUnique({ where: { id: parentId } })
 
-    // 사용자 메시지 저장
+    // ?�용??메시지 ?�??
     await prisma.message.create({
       data: { parentId, role: 'user', content: message },
     })
 
-    // Claude API 호출
+    // Claude API ?�출
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 500,
-      system: `당신은 ${parent?.name}님의 매일 아침 친구예요. 따뜻하고 친근하게 대화하세요. 
-건강 상태, 식사, 수면을 자연스럽게 확인하고 걱정되는 부분은 기록해두세요.
-짧고 자연스럽게 답변하세요. 카카오톡 말투로요.`,
+      system: `?�신?� ${parent?.name}?�의 매일 ?�침 친구?�요. ?�뜻?�고 친근?�게 ?�?�하?�요. 
+건강 ?�태, ?�사, ?�면???�연?�럽�??�인?�고 걱정?�는 부분�? 기록?�두?�요.
+짧고 ?�연?�럽�??��??�세?? 카카?�톡 말투로요.`,
       messages: [
         ...history.map(h => ({
           role: h.role as 'user' | 'assistant',
@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
 
     const reply = response.content[0].type === 'text' ? response.content[0].text : ''
 
-    // AI 답변 저장
+    // AI ?��? ?�??
     await prisma.message.create({
       data: { parentId, role: 'assistant', content: reply },
     })

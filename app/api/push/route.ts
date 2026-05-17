@@ -10,7 +10,7 @@ webpush.setVapidDetails(
   process.env.VAPID_PRIVATE_KEY!
 )
 
-// 구독 저장
+// 구독 ?�??
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions)
   const kakaoId = (session?.user as any)?.id
@@ -20,11 +20,11 @@ export async function POST(req: NextRequest) {
 
   try {
     const user = await prisma.user.findFirst({
-      where: { email: `kakao_${kakaoId}@gyeote.com` },
+      where: { email: session?.user?.email ?? `kakao_${kakaoId}@gyeote.com` },
     })
     if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 })
 
-    // 구독 정보 저장 (Subscription 모델 활용)
+    // 구독 ?�보 ?�??(Subscription 모델 ?�용)
     await prisma.subscription.upsert({
       where: { userId: user.id },
       update: { billingKey: JSON.stringify(subscription) },
@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// 푸시 발송
+// ?�시 발송
 export async function GET() {
   try {
     const subscriptions = await prisma.subscription.findMany({
@@ -54,7 +54,7 @@ export async function GET() {
       if (!sub.billingKey) continue
       const pushSubscription = JSON.parse(sub.billingKey)
 
-      // 미응답 부모님 확인
+      // 미응??부모님 ?�인
       const unresponded = sub.user.parents.filter(async (p) => {
         const today = new Date()
         today.setHours(0, 0, 0, 0)
@@ -68,8 +68,8 @@ export async function GET() {
         await webpush.sendNotification(
           pushSubscription,
           JSON.stringify({
-            title: '곁에 알림',
-            body: `부모님이 아직 응답하지 않으셨어요. 확인해보세요.`,
+            title: '곁에 ?�림',
+            body: `부모님???�직 ?�답?��? ?�으?�어?? ?�인?�보?�요.`,
           })
         )
       }
