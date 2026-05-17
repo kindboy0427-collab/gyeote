@@ -52,24 +52,6 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="px-6 py-16 bg-white">
-        <h3 className="text-center text-2xl font-bold text-gray-800 mb-10">실제 사용 후기</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
-          {[
-            { name: '김*영', text: '혼자 사시는 어머니가 걱정됐는데, 매일 아침 안부 확인이 되니까 정말 마음이 놓여요.', tag: '직장인 40대' },
-            { name: '이*준', text: '부모님이 카카오톡을 원래 쓰셔서 따로 앱 설치 없이 바로 쓸 수 있어서 좋았어요.', tag: '자녀 30대' },
-            { name: '박*희', text: '응답이 없으면 바로 알림이 와서 빠르게 연락드릴 수 있었어요. 안심이 돼요.', tag: '맞벌이 부부' },
-          ].map((r, i) => (
-            <div key={i} className="bg-gray-50 rounded-2xl p-6 shadow-sm">
-              <p className="text-gray-700 text-sm leading-relaxed mb-4">"{r.text}"</p>
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-gray-800 text-sm">{r.name}</span>
-                <span className="text-xs text-gray-400 bg-gray-200 px-2 py-1 rounded-full">{r.tag}</span>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
 
       <section className="px-6 py-16 bg-white">
 
