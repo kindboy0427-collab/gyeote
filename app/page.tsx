@@ -71,23 +71,38 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="px-6 py-16 bg-gray-50">
-        <h3 className="text-center text-2xl font-bold text-gray-800 mb-12">시작하기까지 3분이면 충분해요</h3>
-        <div className="flex flex-col md:flex-row items-center justify-center gap-6 max-w-3xl mx-auto">
+      <section className="px-6 py-16 bg-white">
+
+        <h3 className="text-center text-2xl font-bold text-gray-800 mb-10">이런 마음, 혹시 나만 그런 게 아니었어요</h3>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+
           {[
-            { step: '01', title: '카카오로 로그인', desc: '카카오 계정으로 간편하게 가입해요' },
-            { step: '02', title: '부모님 정보 등록', desc: '이름과 전화번호만 입력하면 돼요' },
-            { step: '03', title: '매일 자동으로 안부 확인', desc: '등록 즉시 다음날 아침부터 시작돼요' },
-          ].map((s, i) => (
-            <div key={i} className="flex-1 text-center">
-              <div className="w-12 h-12 bg-green-500 text-white rounded-full flex items-center justify-center font-bold text-lg mx-auto mb-4">
-                {s.step}
+
+            { text: '바쁘다는 핑계로 또 미뤘어요.\n오늘도 전화 못 드렸네요.', tag: '직장인 30대 자녀' },
+
+            { text: '유튜브에서 슬픈 영상 볼 때만\n갑자기 생각나서 카톡 드려요.', tag: '맞벌이 40대 부부' },
+
+            { text: '언제부터인가 먼저 연락 안 오시더라고요.\n그게 더 마음에 걸려요.', tag: '지방 거주 50대 자녀' },
+
+          ].map((r, i) => (
+
+            <div key={i} className="bg-gray-50 rounded-2xl p-6 shadow-sm">
+
+              <p className="text-gray-700 text-sm leading-relaxed mb-4 whitespace-pre-line">"{r.text}"</p>
+
+              <div className="flex items-center justify-end">
+
+                <span className="text-xs text-gray-400 bg-gray-200 px-2 py-1 rounded-full">{r.tag}</span>
+
               </div>
-              <h4 className="font-bold text-gray-800 mb-2">{s.title}</h4>
-              <p className="text-gray-500 text-sm">{s.desc}</p>
+
             </div>
+
           ))}
+
         </div>
+
       </section>
 
       <section className="px-6 py-20 bg-green-500 text-center">
