@@ -4,6 +4,8 @@ import { redirect } from 'next/navigation'
 import { authOptions } from '@/src/lib/auth'
 import { prisma } from '@/lib/prisma'
 
+const ADMIN_KAKAO_ID = '4887737362'
+
 function formatDate(date: Date | string | null | undefined) {
   if (!date) return '-'
   return new Date(date).toLocaleString('ko-KR')
@@ -17,10 +19,9 @@ export default async function AdminPage() {
   const session = await getServerSession(authOptions)
   if (!session) redirect('/login')
 
-  const userEmail = session.user?.email ?? ''
-  const adminEmail = process.env.ADMIN_EMAIL
+  const kakaoId = (session.user as { id?: string })?.id
 
-  if (userEmail !== adminEmail) {
+  if (kakaoId !== ADMIN_KAKAO_ID) {
     redirect('/dashboard')
   }
 
@@ -36,7 +37,7 @@ export default async function AdminPage() {
     prisma.subscription.count({ where: { status: 'trial' } }),
     prisma.subscription.count({ where: { status: 'canceled' } }),
     prisma.subscription.findMany({
-      where: { status: { in: ['active', 'trial', 'failed', 'canceled'] } },
+      where: { status: { in: ['active', 'trial', 'failed', 'canceled', 'pending'] } },
       orderBy: { updatedAt: 'desc' },
       take: 20,
       include: { user: true },
@@ -79,7 +80,7 @@ export default async function AdminPage() {
         </div>
 
         <div className="bg-white rounded-2xl p-5 shadow-sm">
-          <h2 className="text-base font-bold text-gray-900 mb-4">최근 결제 내역</h2>
+          <h2 className="text-base font-bold text-gray-900 mb-4">구독 관리</h2>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -90,7 +91,7 @@ export default async function AdminPage() {
                   <th className="py-2 pr-4">결제수단</th>
                   <th className="py-2 pr-4">금액</th>
                   <th className="py-2 pr-4">다음 결제일</th>
-                  <th className="py-2 pr-4">수정일</th>
+                  <th className="py-2 pr-4">무료 연장</th>
                 </tr>
               </thead>
               <tbody>
@@ -123,7 +124,19 @@ export default async function AdminPage() {
                       {sub.status === 'trial' ? '무료' : `${formatPrice(sub.price)}원`}
                     </td>
                     <td className="py-3 pr-4 text-gray-800">{formatDate(sub.nextBillingAt)}</td>
-                    <td className="py-3 pr-4 text-gray-500">{formatDate(sub.updatedAt)}</td>
+                    <td className="py-3 pr-4">
+                      <form action="/api/admin/extend" method="POST" style={{display:'inline'}}>
+                        <input type="hidden" name="subscriptionId" value={sub.id} />
+                        <select name="days" className="text-xs border rounded px-1 py-0.5 mr-1">
+                          <option value="7">7일</option>
+                          <option value="14">14일</option>
+                          <option value="30">30일</option>
+                        </select>
+                        <button type="submit" className="text-xs bg-blue-500 text-white px-2 py-1 rounded">
+                          연장
+                        </button>
+                      </form>
+                    </td>
                   </tr>
                 ))}
               </tbody>
