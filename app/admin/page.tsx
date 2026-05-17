@@ -3,28 +3,27 @@ import { getServerSession } from 'next-auth'
 import { redirect } from 'next/navigation'
 import { authOptions } from '@/src/lib/auth'
 import { prisma } from '@/lib/prisma'
-
-const ADMIN_KAKAO_ID = '4887737362'
-
+ 
 function formatDate(date: Date | string | null | undefined) {
   if (!date) return '-'
   return new Date(date).toLocaleString('ko-KR')
 }
-
+ 
 function formatPrice(price: number) {
   return price.toLocaleString('ko-KR')
 }
-
+ 
 export default async function AdminPage() {
   const session = await getServerSession(authOptions)
   if (!session) redirect('/login')
-
-  const kakaoId = (session.user as { id?: string })?.id
-
-  if (kakaoId !== ADMIN_KAKAO_ID) {
+ 
+  const userEmail = session.user?.email ?? ''
+  const adminEmail = process.env.ADMIN_EMAIL
+ 
+  if (userEmail !== adminEmail) {
     redirect('/dashboard')
   }
-
+ 
   const [
     totalUsers,
     activeSubscriptions,
@@ -37,13 +36,19 @@ export default async function AdminPage() {
     prisma.subscription.count({ where: { status: 'trial' } }),
     prisma.subscription.count({ where: { status: 'canceled' } }),
     prisma.subscription.findMany({
-      where: { status: { in: ['active', 'trial', 'failed', 'canceled', 'pending'] } },
+      where: { status: { in: ['active', 'trial', 'failed', 'canceled'] } },
       orderBy: { updatedAt: 'desc' },
       take: 20,
-      include: { user: true },
+      include: {
+        user: {
+          include: {
+            parents: true,
+          },
+        },
+      },
     }),
   ])
-
+ 
   return (
     <main className="min-h-screen bg-gray-50">
       <header className="bg-white border-b px-6 py-4 flex items-center justify-between">
@@ -52,10 +57,10 @@ export default async function AdminPage() {
           <span className="text-xs bg-red-100 text-red-600 font-bold px-2 py-1 rounded-full">관리자</span>
         </div>
       </header>
-
-      <div className="max-w-5xl mx-auto px-4 py-6">
+ 
+      <div className="max-w-6xl mx-auto px-4 py-6">
         <h1 className="text-2xl font-bold text-gray-900 mb-6">관리자 대시보드</h1>
-
+ 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           <div className="bg-white rounded-2xl p-5 shadow-sm">
             <p className="text-xs text-gray-400 mb-1">총 가입자</p>
@@ -78,14 +83,15 @@ export default async function AdminPage() {
             <p className="text-xs text-gray-400 mt-1">명</p>
           </div>
         </div>
-
+ 
         <div className="bg-white rounded-2xl p-5 shadow-sm">
           <h2 className="text-base font-bold text-gray-900 mb-4">구독 관리</h2>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-xs text-gray-400 border-b">
-                  <th className="py-2 pr-4">유저</th>
+                  <th className="py-2 pr-4">닉네임</th>
+                  <th className="py-2 pr-4">부모님</th>
                   <th className="py-2 pr-4">상태</th>
                   <th className="py-2 pr-4">플랜</th>
                   <th className="py-2 pr-4">결제수단</th>
@@ -98,6 +104,11 @@ export default async function AdminPage() {
                 {recentPayments.map((sub) => (
                   <tr key={sub.id} className="border-b last:border-b-0">
                     <td className="py-3 pr-4 text-gray-800">{sub.user?.name ?? '-'}</td>
+                    <td className="py-3 pr-4 text-gray-600 text-xs">
+                      {sub.user?.parents && sub.user.parents.length > 0
+                        ? sub.user.parents.map(p => `${p.name}(${p.phone})`).join(', ')
+                        : '-'}
+                    </td>
                     <td className="py-3 pr-4">
                       <span className={`px-2 py-1 rounded-full text-xs font-bold ${
                         sub.status === 'active' ? 'bg-green-100 text-green-700' :
