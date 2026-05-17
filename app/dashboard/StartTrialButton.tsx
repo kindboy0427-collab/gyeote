@@ -53,7 +53,7 @@ export default function StartTrialButton() {
           placeholder="초대 코드 입력"
           value={code}
           onChange={(e) => setCode(e.target.value.toUpperCase())}
-          className="border border-gray-300 rounded-xl px-4 py-2 text-sm w-40 focus:outline-none focus:border-blue-400"
+          className="border border-gray-300 rounded-xl px-4 py-2 text-sm text-gray-900 w-40 focus:outline-none focus:border-blue-400"
         />
         <button
           onClick={handleStart}
