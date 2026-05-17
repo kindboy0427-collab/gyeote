@@ -16,6 +16,7 @@ model User {
   subscriptions    Subscription[]
   notificationLogs NotificationLog[]
   paymentLogs      PaymentLog[]
+  reviews          Review[]
 }
 
 model Parent {
@@ -135,4 +136,12 @@ model PaymentLog {
   @@index([subscriptionId])
   @@index([status])
   @@index([createdAt])
+}
+model Review {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  content   String
+  rating    Int      @default(5)
+  createdAt DateTime @default(now())
 }
