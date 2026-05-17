@@ -50,21 +50,21 @@ export const authOptions: NextAuthOptions = {
     },
     async session({ session, token }: any) {
       if (session.user) {
-        if (token?.email) session.user.email = token.email
+        session.user.email = token?.email ?? session.user.email
         if (token?.name) session.user.name = token.name
         if (token?.sub) session.user.id = token.sub
       }
       return session
     },
     async jwt({ token, profile }: any) {
-  if (profile) {
-    token.email = profile?.kakao_account?.email ?? `kakao_${token.sub}@gyeote.com`
-    token.name = profile.kakao_account?.profile?.nickname ?? profile.properties?.nickname ?? 'user'
-  }
-  if (!token.email && token.sub) {
-    token.email = `kakao_${token.sub}@gyeote.com`
-  }
-  return token
-},
+      if (profile) {
+        token.email = profile?.kakao_account?.email ?? `kakao_${token.sub}@gyeote.com`
+        token.name = profile.kakao_account?.profile?.nickname ?? profile.properties?.nickname ?? 'user'
+      }
+      if (!token.email && token.sub) {
+        token.email = `kakao_${token.sub}@gyeote.com`
+      }
+      return token
+    },
   },
 }
