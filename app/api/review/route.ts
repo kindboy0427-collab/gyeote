@@ -1,43 +1,48 @@
-import { NextRequest, NextResponse } from 'next/server'
+﻿import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
 export async function POST(req: NextRequest) {
   try {
-    const { phone, content, rating } = await req.json()
+    const { token, rating, content } = await req.json()
 
-    if (!phone || !content) {
-      return NextResponse.json({ error: '?�화번호?� ?�기 ?�용???�요?�니??' }, { status: 400 })
+    if (!token || !content || !rating) {
+      return NextResponse.json({ error: '필수 항목이 없습니다.' }, { status: 400 })
     }
 
-    // ?�화번호�?부모님 찾기
-    const parent = await prisma.parent.findFirst({
-      where: { phone: phone.replace(/-/g, '') },
-      include: { user: { include: { subscriptions: true } } },
+    const user = await prisma.user.findFirst({
+      where: { reviewToken: token },
+      include: { subscriptions: true },
     })
 
-    if (!parent) {
-      return NextResponse.json({ error: '?�록??부모님??찾을 ???�습?�다.' }, { status: 404 })
+    if (!user) {
+      return NextResponse.json({ error: '유효하지 않은 토큰입니다.' }, { status: 404 })
     }
 
-    const user = parent.user
+    // 이미 후기 작성했는지 확인 (중복 방지)
+    const existing = await prisma.review.findFirst({
+      where: { userId: user.id },
+    })
+    if (existing) {
+      return NextResponse.json({ error: '이미 후기를 작성하셨습니다.' }, { status: 409 })
+    }
 
-    // ?�기 ?�??
+    // 후기 저장
     await prisma.review.create({
       data: {
         userId: user.id,
         content,
-        rating: rating ?? 5,
+        rating,
       },
     })
 
-    // 구독 1주일 ?�장
+    // 구독 7일 연장
     const subscription = user.subscriptions.find(
       (s) => s.status === 'trial' || s.status === 'active'
     )
 
     if (subscription) {
-      const current = subscription.nextBillingAt ?? new Date()
-      const newDate = new Date(current)
+      const base = subscription.nextBillingAt ?? new Date()
+      const newDate = new Date(base)
       newDate.setDate(newDate.getDate() + 7)
 
       await prisma.subscription.update({
@@ -45,6 +50,12 @@ export async function POST(req: NextRequest) {
         data: { nextBillingAt: newDate },
       })
     }
+
+    // 토큰 사용 처리 (재사용 방지)
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { reviewToken: null },
+    })
 
     return NextResponse.json({ ok: true })
   } catch (e) {

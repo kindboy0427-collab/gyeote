@@ -15,6 +15,7 @@ model User {
   createdAt        DateTime          @default(now())
   parents          Parent[]
   subscriptions    Subscription[]
+  reviewToken      String?           @unique
   notificationLogs NotificationLog[]
   paymentLogs      PaymentLog[]
   reviews          Review[]
