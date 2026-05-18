@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+﻿import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { generateTodayMessage, sendKakaoAlimtalk } from '@/lib/kakao/alimtalk'
 
@@ -25,15 +25,20 @@ function isCronAuthorized(request: NextRequest) {
 function getKstParts(date = new Date()) {
   const formatter = new Intl.DateTimeFormat('en-CA', {
     timeZone: KST_TIME_ZONE,
-    year: 'numeric', month: '2-digit', day: '2-digit',
-    hour: '2-digit', minute: '2-digit', second: '2-digit',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
     hourCycle: 'h23',
   })
+
   const parts = formatter.formatToParts(date)
-  const values = Object.fromEntries(
-    parts.filter((p) => p.type !== 'literal').map((p) => [p.type, p.value])
+
+  return Object.fromEntries(
+    parts.filter((part) => part.type !== 'literal').map((part) => [part.type, part.value])
   )
-  return values
 }
 
 function getCurrentKstHHmm() {
@@ -43,6 +48,7 @@ function getCurrentKstHHmm() {
 
 function getTodayKstRange() {
   const parts = getKstParts()
+
   return {
     start: new Date(`${parts.year}-${parts.month}-${parts.day}T00:00:00.000+09:00`),
     end: new Date(`${parts.year}-${parts.month}-${parts.day}T23:59:59.999+09:00`),
@@ -51,23 +57,51 @@ function getTodayKstRange() {
 
 function hhmmToMinutes(hhmm: string) {
   const [hour, minute] = hhmm.split(':').map(Number)
-  if (Number.isNaN(hour) || Number.isNaN(minute)) return null
+
+  if (Number.isNaN(hour) || Number.isNaN(minute)) {
+    return null
+  }
+
   return hour * 60 + minute
 }
 
 function isWithinSendWindow(currentHHmm: string) {
-  const cur = hhmmToMinutes(currentHHmm)
+  const current = hhmmToMinutes(currentHHmm)
   const start = hhmmToMinutes(SEND_START_HHMM)
   const end = hhmmToMinutes(SEND_END_HHMM)
-  if (cur === null || start === null || end === null) return false
-  return cur >= start && cur <= end
+
+  if (current === null || start === null || end === null) {
+    return false
+  }
+
+  return current >= start && current <= end
 }
 
-function createLunchMessage(parentName: string, todayMessage: string, hasMedication: boolean) {
-  if (hasMedication) {
-    return `${parentName}?? ?�심?� 챙겨 ?�셨?�요? ?��\n\n${todayMessage}\n\n?�늘 ?��? ?�셨?�요? ?��\n?��? ?��???건강??지켜드린답?�다.\n?��? 말고 �?챙겨 ?�세???��\n\n??�� ?�신 곁에 ?�을게요.\n- 곁에`
+function createLunchMessage(
+  parentName: string,
+  todayMessage: string,
+  medication: string | null
+) {
+  if (medication) {
+    return `${parentName}님, 점심은 챙겨 드셨나요?
+
+${todayMessage}
+
+그리고 오늘 ${medication}도 잊지 않고 챙겨 주세요.
+작은 습관이 건강을 지켜드려요.
+
+항상 곁에 있을게요.
+- 곁에`
   }
-  return `${parentName}?? ?�심?� 챙겨 ?�셨?�요? ?��\n\n${todayMessage}\n\n맛있??�??�시�??�후??건강?�게 보내?�요 ?��\n\n??�� ?�신 곁에 ?�을게요.\n- 곁에`
+
+  return `${parentName}님, 점심은 챙겨 드셨나요?
+
+${todayMessage}
+
+맛있게 식사하시고 오후도 편안하게 보내세요.
+
+항상 곁에 있을게요.
+- 곁에`
 }
 
 export async function GET(request: NextRequest) {
@@ -83,7 +117,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({
         ok: true,
         blocked: true,
-        message: `?�심 ?�림 ?�용 ?�간(${SEND_START_HHMM}~${SEND_END_HHMM}) 밖입?�다.`,
+        message: `점심 알림 허용 시간(${SEND_START_HHMM}~${SEND_END_HHMM}) 밖입니다.`,
         currentKstHHmm,
       })
     }
@@ -91,6 +125,7 @@ export async function GET(request: NextRequest) {
     const parents = await prisma.parent.findMany({
       where: {
         isActive: true,
+        mealCheck: true,
         user: {
           subscriptions: {
             some: { status: { in: ['active', 'trial'] } },
@@ -113,12 +148,21 @@ export async function GET(request: NextRequest) {
 
     for (const parent of parents) {
       if (parent.responses.length > 0) {
-        results.push({ parentId: parent.id, status: 'already_exists' })
+        results.push({
+          parentId: parent.id,
+          parentName: parent.name,
+          status: 'already_exists',
+        })
+
         continue
       }
 
-      const hasMedication = !!(parent as any).medication
-      const message = createLunchMessage(parent.name, todayMessage, hasMedication)
+      const medication =
+        typeof parent.medication === 'string' && parent.medication.trim().length > 0
+          ? parent.medication.trim()
+          : null
+
+      const message = createLunchMessage(parent.name, todayMessage, medication)
 
       await prisma.response.create({
         data: {
@@ -133,7 +177,7 @@ export async function GET(request: NextRequest) {
         to: parent.phone,
         parentName: parent.name,
         message,
-        templateCode: hasMedication
+        templateCode: medication
           ? process.env.KAKAO_ALIMTALK_TEMPLATE_CODE_LUNCH_MED
           : process.env.KAKAO_ALIMTALK_TEMPLATE_CODE_LUNCH,
       })
@@ -145,8 +189,14 @@ export async function GET(request: NextRequest) {
           channel: 'KAKAO_ALIMTALK',
           status: alimtalkResult.success ? 'sent' : 'failed',
           message,
-          error: alimtalkResult.error ?? null,
-          rawData: JSON.parse(JSON.stringify({ kind: 'LUNCH', ...alimtalkResult })),
+          error: alimtalkResult.reason ?? alimtalkResult.error ?? null,
+          rawData: JSON.parse(
+            JSON.stringify({
+              kind: medication ? 'LUNCH_MEDICATION' : 'LUNCH',
+              medication,
+              ...alimtalkResult,
+            })
+          ),
         },
       })
 
@@ -154,13 +204,25 @@ export async function GET(request: NextRequest) {
         parentId: parent.id,
         parentName: parent.name,
         status: alimtalkResult.success ? 'sent' : 'failed',
+        medication: medication ?? null,
       })
     }
 
-    return NextResponse.json({ ok: true, currentKstHHmm, results })
+    return NextResponse.json({
+      ok: true,
+      currentKstHHmm,
+      count: results.length,
+      results,
+    })
   } catch (error) {
     return NextResponse.json(
-      { ok: false, message: error instanceof Error ? error.message : '?�심 ?�론 ?�류' },
+      {
+        ok: false,
+        message:
+          error instanceof Error
+            ? error.message
+            : '점심 Cron 처리 중 오류가 발생했습니다.',
+      },
       { status: 500 }
     )
   }

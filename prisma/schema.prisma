@@ -11,6 +11,7 @@ model User {
   id               String            @id @default(cuid())
   email            String            @unique
   name             String?
+  guardianPhone    String?
   createdAt        DateTime          @default(now())
   parents          Parent[]
   subscriptions    Subscription[]
@@ -24,6 +25,8 @@ model Parent {
   userId           String
   user             User              @relation(fields: [userId], references: [id])
   name             String
+  mealCheck        Boolean           @default(true)
+  medication       String?
   phone            String
   kakaoId          String?
   morningTime      String            @default("09:00")
