@@ -128,6 +128,7 @@ export default async function Dashboard() {
   const { start, end } = getTodayRange()
 
   const userEmail = session.user?.email
+  console.log('DEBUG:', { kakaoId, email: session.user?.email })
   const user = await prisma.user.findFirst({
     where: {
       OR: [
