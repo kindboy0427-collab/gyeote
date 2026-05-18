@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+﻿import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { sendKakaoAlimtalk } from '@/lib/kakao/alimtalk'
 
@@ -24,11 +24,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ ok: false, message: 'Unauthorized' }, { status: 401 })
     }
 
-    // ?�일 만료?�는 trial 구독 찾기
     const tomorrow = new Date()
     tomorrow.setDate(tomorrow.getDate() + 1)
+
     const tomorrowStart = new Date(tomorrow)
     tomorrowStart.setHours(0, 0, 0, 0)
+
     const tomorrowEnd = new Date(tomorrow)
     tomorrowEnd.setHours(23, 59, 59, 999)
 
@@ -41,37 +42,44 @@ export async function GET(request: NextRequest) {
         },
       },
       include: {
-        user: {
-          include: {
-            parents: true,
-          },
-        },
+        user: true,
       },
     })
 
     const results = []
 
     for (const sub of subscriptions) {
-      for (const parent of sub.user.parents) {
-        const alimtalkResult = await sendKakaoAlimtalk({
-          to: parent.phone,
-          parentName: parent.name,
-          message: '?�기�??�겨주시�?1주일 무료 ?�장?�드?�요 ?��',
-          templateCode: process.env.KAKAO_ALIMTALK_TEMPLATE_CODE_REVIEW,
-        })
+      const user = sub.user
 
+      if (!user?.guardianPhone) {
         results.push({
-          parentName: parent.name,
-          phone: parent.phone,
-          status: alimtalkResult.statusText,
+          userId: user?.id,
+          userName: user?.name,
+          status: 'skipped',
+          reason: 'guardianPhone 없음',
         })
+        continue
       }
+
+      const alimtalkResult = await sendKakaoAlimtalk({
+        to: user.guardianPhone,
+        parentName: '보호자',
+        message: '보호자님, 곁에 무료 체험이 내일 종료됩니다.\n후기를 남겨주시면 7일 무료 연장을 도와드릴게요 🎁',
+        templateCode: process.env.KAKAO_ALIMTALK_TEMPLATE_CODE_REVIEW,
+      })
+
+      results.push({
+        userId: user.id,
+        userName: user.name,
+        phone: user.guardianPhone,
+        status: alimtalkResult.statusText,
+      })
     }
 
     return NextResponse.json({ ok: true, total: subscriptions.length, results })
   } catch (error) {
     return NextResponse.json(
-      { ok: false, message: error instanceof Error ? error.message : '?????�는 ?�류' },
+      { ok: false, message: error instanceof Error ? error.message : '무료체험 알림 크론 오류' },
       { status: 500 }
     )
   }

@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+﻿import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { sendKakaoAlimtalk } from '@/lib/kakao/alimtalk'
 
@@ -34,11 +34,7 @@ export async function GET(request: NextRequest) {
         },
       },
       include: {
-        user: {
-          include: {
-            parents: true,
-          },
-        },
+        user: true,
       },
     })
 
@@ -46,17 +42,25 @@ export async function GET(request: NextRequest) {
 
     for (const sub of subscriptions) {
       const user = sub.user
-      if (!user) continue
+      if (!user?.guardianPhone) {
+        results.push({
+          userId: user?.id,
+          userName: user?.name,
+          status: 'skipped',
+          reason: 'guardianPhone 없음',
+        })
+        continue
+      }
 
       const price = sub.price.toLocaleString('ko-KR')
       const plan = sub.plan?.toLowerCase() === 'yearly' ? '연간' : '월간'
-      const message = `${user.name ?? '사용자'}님, 내일 ${plan} 구독 ${price}원이 자동 결제됩니다 💳\n\n계속 이용하시면 별도 조치 없이 자동으로 결제돼요.\n해지를 원하시면 대시보드에서 언제든지 해지할 수 있어요.\n\n항상 곁에 있을게요.\n- 곁에`
+      const message = `보호자님, 내일 ${plan} 구독 ${price}원이 자동 결제됩니다 💳\n\n계속 이용하시면 별도 조치 없이 자동으로 결제돼요.\n해지를 원하시면 대시보드에서 언제든지 해지할 수 있어요.\n\n항상 곁에 있을게요.\n- 곁에`
 
       const templateCode = process.env.KAKAO_ALIMTALK_TEMPLATE_CODE_BILLING_REMINDER
 
       const alimtalkResult = await sendKakaoAlimtalk({
-        to: user.parents?.[0]?.phone ?? '',
-        parentName: user.name ?? '사용자',
+        to: user.guardianPhone,
+        parentName: '보호자',
         message,
         templateCode,
       })

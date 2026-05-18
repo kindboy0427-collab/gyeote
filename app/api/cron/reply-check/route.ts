@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+﻿import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { sendKakaoAlimtalk } from '@/lib/kakao/alimtalk'
 
@@ -8,6 +8,7 @@ export const runtime = 'nodejs'
 const KST_TIME_ZONE = 'Asia/Seoul'
 const FOLLOW_UP_AFTER_HOURS = 2
 const GUARDIAN_ALERT_AFTER_HOURS = 3
+const GUARDIAN_ALERT_AFTER_FOLLOW_UP_HOURS = 1
 
 type ReplyCheckStatus =
   | 'no_response_yet'
@@ -15,9 +16,17 @@ type ReplyCheckStatus =
   | 'follow_up_failed'
   | 'follow_up_skipped'
   | 'follow_up_already_sent'
-  | 'guardian_alert_required'
-  | 'guardian_alert_already_logged'
+  | 'guardian_alert_sent'
+  | 'guardian_alert_failed'
+  | 'guardian_alert_skipped'
+  | 'guardian_alert_already_sent'
+  | 'guardian_phone_missing'
   | 'responded'
+
+type NotificationLogForCheck = {
+  rawData: unknown
+  createdAt: Date
+}
 
 function getBearerToken(request: NextRequest) {
   const authHeader = request.headers.get('authorization')
@@ -96,11 +105,20 @@ function getElapsedHours(from: Date, to = new Date()) {
 }
 
 function createFollowUpMessage(parentName: string) {
-  return `${parentName}?? ?�직 ?�늘 ?��? ?�장???�인?��? ?�았?�니?? 괜찮?�시�?짧게?�도 ?�장??주세??`
+  return `${parentName}님, 아직 오늘 안부 답장을 확인하지 못했어요.
+
+괜찮으시면 짧게라도 답장해 주세요.
+
+항상 곁에 있을게요.
+- 곁에`
 }
 
 function createGuardianAlertMessage(parentName: string) {
-  return `${parentName}?�이 ?�늘 ?��? ?�림 ??3?�간??지?�도�??�장?��? ?�았?�니?? ?�인???�요?�니??`
+  return `${parentName}님이 오늘 아침 안부 알림 이후 3시간 동안 답장하지 않으셨어요.
+
+확인이 필요할 수 있습니다.
+
+- 곁에`
 }
 
 function getLogStatus(statusText: 'sent' | 'failed' | 'skipped') {
@@ -115,12 +133,12 @@ function getLogStatus(statusText: 'sent' | 'failed' | 'skipped') {
   return 'failed'
 }
 
-function hasLogKind(
-  logs: Array<{ rawData: unknown }>,
+function findLogByKind(
+  logs: NotificationLogForCheck[],
   responseId: string,
   kind: string
 ) {
-  return logs.some((log) => {
+  return logs.find((log) => {
     const rawData = log.rawData
 
     if (!rawData || typeof rawData !== 'object') {
@@ -156,12 +174,22 @@ export async function GET(request: NextRequest) {
         user: {
           subscriptions: {
             some: {
-              status: 'active',
+              status: {
+                in: ['active', 'trial'],
+              },
             },
           },
         },
       },
       include: {
+        user: {
+          select: {
+            id: true,
+            email: true,
+            name: true,
+            guardianPhone: true,
+          },
+        },
         responses: {
           where: {
             type: 'morning',
@@ -209,7 +237,7 @@ export async function GET(request: NextRequest) {
           parentName: parent.name,
           phone: parent.phone,
           status: 'no_response_yet',
-          reason: '?�늘 최초 ?��? Response가 ?�습?�다.',
+          reason: '오늘 최초 아침 Response가 없습니다.',
         })
 
         continue
@@ -222,94 +250,34 @@ export async function GET(request: NextRequest) {
           phone: parent.phone,
           responseId: response.id,
           status: 'responded',
-          reason: '?��? ?�장 ?�료 ?�태?�니??',
+          reason: '오늘 답장 완료 상태입니다.',
         })
 
         continue
       }
 
       const elapsedHours = getElapsedHours(new Date(response.date))
-      const followUpAlreadySent = hasLogKind(
+
+      const followUpLog = findLogByKind(
         parent.notificationLogs,
         response.id,
         'MORNING_FOLLOW_UP'
       )
-      const guardianAlertAlreadyLogged = hasLogKind(
+
+      const guardianAlertLog = findLogByKind(
         parent.notificationLogs,
         response.id,
-        'GUARDIAN_ALERT_REQUIRED'
+        'GUARDIAN_ALERT_SENT'
       )
 
-      if (elapsedHours >= GUARDIAN_ALERT_AFTER_HOURS) {
-        if (guardianAlertAlreadyLogged) {
-          results.push({
-            parentId: parent.id,
-            parentName: parent.name,
-            phone: parent.phone,
-            responseId: response.id,
-            elapsedHours,
-            status: 'guardian_alert_already_logged',
-            reason: '보호???�림 ?�요 로그가 ?��? ?�습?�다.',
-          })
-
-          continue
-        }
-
-        const guardianMessage = createGuardianAlertMessage(parent.name)
-
-        await prisma.notificationLog.create({
-          data: {
-            userId: parent.userId,
-            parentId: parent.id,
-            channel: 'GUARDIAN_ALERT',
-            status: 'required',
-            message: guardianMessage,
-            error: null,
-            rawData: {
-              kind: 'GUARDIAN_ALERT_REQUIRED',
-              responseId: response.id,
-              parentName: parent.name,
-              elapsedHours,
-              reason:
-                '최초 ?��? ?�림??발송 ??3?�간 초과 + ?�직 ?�장 ?�음',
-            },
-          },
-        })
-
-        results.push({
-          parentId: parent.id,
-          parentName: parent.name,
-          phone: parent.phone,
-          responseId: response.id,
-          elapsedHours,
-          status: 'guardian_alert_required',
-          reason: '최초 ?��? ??3?�간 초과 + ?�직 ?�장 ?�음',
-        })
-
-        continue
-      }
-
-      if (elapsedHours >= FOLLOW_UP_AFTER_HOURS) {
-        if (followUpAlreadySent) {
-          results.push({
-            parentId: parent.id,
-            parentName: parent.name,
-            phone: parent.phone,
-            responseId: response.id,
-            elapsedHours,
-            status: 'follow_up_already_sent',
-            reason: '추�? ?�림?�이 ?��? 1??발송?�었?�니??',
-          })
-
-          continue
-        }
-
+      if (elapsedHours >= FOLLOW_UP_AFTER_HOURS && !followUpLog) {
         const followUpMessage = createFollowUpMessage(parent.name)
 
         const alimtalkResult = await sendKakaoAlimtalk({
           to: parent.phone,
           parentName: parent.name,
           message: followUpMessage,
+          templateCode: process.env.KAKAO_ALIMTALK_TEMPLATE_CODE_MORNING_FOLLOW_UP,
         })
 
         const logStatus = getLogStatus(alimtalkResult.statusText)
@@ -360,7 +328,7 @@ export async function GET(request: NextRequest) {
             responseId: response.id,
             elapsedHours,
             status: 'follow_up_failed',
-            error: alimtalkResult.error ?? '추�? ?�림??발송 ?�패',
+            error: alimtalkResult.error ?? '추가 알림톡 발송 실패',
           })
 
           continue
@@ -373,7 +341,174 @@ export async function GET(request: NextRequest) {
           responseId: response.id,
           elapsedHours,
           status: 'follow_up_sent',
-          reason: '최초 ?��? ??2?�간 초과 + ?�직 ?�장 ?�음',
+          reason: '최초 아침 알림 후 2시간 무응답으로 부모님 추가 알림 1회 발송',
+        })
+
+        continue
+      }
+
+      if (followUpLog && elapsedHours < GUARDIAN_ALERT_AFTER_HOURS) {
+        results.push({
+          parentId: parent.id,
+          parentName: parent.name,
+          phone: parent.phone,
+          responseId: response.id,
+          elapsedHours,
+          status: 'follow_up_already_sent',
+          reason: '부모님 추가 알림은 이미 발송됐고, 아직 3시간 무응답 기준 전입니다.',
+        })
+
+        continue
+      }
+
+      if (followUpLog && elapsedHours >= GUARDIAN_ALERT_AFTER_HOURS) {
+        const elapsedAfterFollowUpHours = getElapsedHours(
+          new Date(followUpLog.createdAt)
+        )
+
+        if (elapsedAfterFollowUpHours < GUARDIAN_ALERT_AFTER_FOLLOW_UP_HOURS) {
+          results.push({
+            parentId: parent.id,
+            parentName: parent.name,
+            phone: parent.phone,
+            responseId: response.id,
+            elapsedHours,
+            status: 'follow_up_already_sent',
+            reason: '부모님 추가 알림 후 아직 1시간이 지나지 않았습니다.',
+          })
+
+          continue
+        }
+
+        if (guardianAlertLog) {
+          results.push({
+            parentId: parent.id,
+            parentName: parent.name,
+            phone: parent.phone,
+            responseId: response.id,
+            elapsedHours,
+            status: 'guardian_alert_already_sent',
+            reason: '보호자 카톡 알림이 이미 발송됐습니다.',
+          })
+
+          continue
+        }
+
+        if (!parent.user.guardianPhone) {
+          const guardianMessage = createGuardianAlertMessage(parent.name)
+
+          await prisma.notificationLog.create({
+            data: {
+              userId: parent.userId,
+              parentId: parent.id,
+              channel: 'GUARDIAN_ALERT',
+              status: 'guardian_phone_missing',
+              message: guardianMessage,
+              error: '보호자 전화번호가 등록되어 있지 않습니다.',
+              rawData: {
+                kind: 'GUARDIAN_PHONE_MISSING',
+                responseId: response.id,
+                parentName: parent.name,
+                elapsedHours,
+                elapsedAfterFollowUpHours,
+              },
+            },
+          })
+
+          results.push({
+            parentId: parent.id,
+            parentName: parent.name,
+            phone: parent.phone,
+            responseId: response.id,
+            elapsedHours,
+            status: 'guardian_phone_missing',
+            reason: '보호자 전화번호가 등록되어 있지 않습니다.',
+          })
+
+          continue
+        }
+
+        const guardianMessage = createGuardianAlertMessage(parent.name)
+
+        const guardianAlimtalkResult = await sendKakaoAlimtalk({
+  to: parent.user.guardianPhone,
+  parentName: '보호자',
+  message: guardianMessage,
+  templateCode: process.env.KAKAO_ALIMTALK_TEMPLATE_CODE_GUARDIAN_ALERT,
+})
+
+        const guardianLogStatus = getLogStatus(guardianAlimtalkResult.statusText)
+
+        await prisma.notificationLog.create({
+          data: {
+            userId: parent.userId,
+            parentId: parent.id,
+            channel: 'GUARDIAN_ALERT',
+            status: guardianLogStatus,
+            message: guardianMessage,
+            error:
+              guardianAlimtalkResult.reason ??
+              guardianAlimtalkResult.error ??
+              null,
+            rawData: {
+              kind: 'GUARDIAN_ALERT_SENT',
+              responseId: response.id,
+              parentName: parent.name,
+              guardianPhone: parent.user.guardianPhone,
+              elapsedHours,
+              elapsedAfterFollowUpHours,
+              status: guardianAlimtalkResult.status,
+              statusText: guardianAlimtalkResult.statusText,
+              success: guardianAlimtalkResult.success,
+              reason: guardianAlimtalkResult.reason ?? null,
+              error: guardianAlimtalkResult.error ?? null,
+              data: guardianAlimtalkResult.data ?? null,
+            },
+          },
+        })
+
+        if (guardianAlimtalkResult.statusText === 'skipped') {
+          results.push({
+            parentId: parent.id,
+            parentName: parent.name,
+            phone: parent.phone,
+            responseId: response.id,
+            elapsedHours,
+            status: 'guardian_alert_skipped',
+            reason:
+              guardianAlimtalkResult.reason ??
+              'GUARDIAN_ALERT_ALIMTALK_NOT_CONFIGURED',
+            error: guardianAlimtalkResult.error,
+          })
+
+          continue
+        }
+
+        if (!guardianAlimtalkResult.success) {
+          results.push({
+            parentId: parent.id,
+            parentName: parent.name,
+            phone: parent.phone,
+            responseId: response.id,
+            elapsedHours,
+            status: 'guardian_alert_failed',
+            error:
+              guardianAlimtalkResult.error ??
+              '보호자 카카오 알림톡 발송 실패',
+          })
+
+          continue
+        }
+
+        results.push({
+          parentId: parent.id,
+          parentName: parent.name,
+          phone: parent.phone,
+          responseId: response.id,
+          elapsedHours,
+          status: 'guardian_alert_sent',
+          reason:
+            '최초 아침 알림 후 3시간 무응답 + 부모님 추가 알림 후 1시간 무응답으로 보호자 카톡 발송',
         })
 
         continue
@@ -386,7 +521,7 @@ export async function GET(request: NextRequest) {
         responseId: response.id,
         elapsedHours,
         status: 'no_response_yet',
-        reason: '최초 ?��? ??2?�간 미만?�니??',
+        reason: '최초 아침 알림 후 2시간 미만입니다.',
       })
     }
 
@@ -409,11 +544,20 @@ export async function GET(request: NextRequest) {
       followUpAlreadySent: results.filter(
         (result) => result.status === 'follow_up_already_sent'
       ).length,
-      guardianAlertRequired: results.filter(
-        (result) => result.status === 'guardian_alert_required'
+      guardianAlertSent: results.filter(
+        (result) => result.status === 'guardian_alert_sent'
       ).length,
-      guardianAlertAlreadyLogged: results.filter(
-        (result) => result.status === 'guardian_alert_already_logged'
+      guardianAlertFailed: results.filter(
+        (result) => result.status === 'guardian_alert_failed'
+      ).length,
+      guardianAlertSkipped: results.filter(
+        (result) => result.status === 'guardian_alert_skipped'
+      ).length,
+      guardianAlertAlreadySent: results.filter(
+        (result) => result.status === 'guardian_alert_already_sent'
+      ).length,
+      guardianPhoneMissing: results.filter(
+        (result) => result.status === 'guardian_phone_missing'
       ).length,
     }
 
@@ -431,7 +575,7 @@ export async function GET(request: NextRequest) {
         message:
           error instanceof Error
             ? error.message
-            : '?�장 ?�인 Cron 처리 �??�류가 발생?�습?�다.',
+            : '답장 확인 Cron 처리 중 오류가 발생했습니다.',
       },
       { status: 500 }
     )
