@@ -37,10 +37,19 @@ export const authOptions: NextAuthOptions = {
 
         const email = profile?.kakao_account?.email ?? `kakao_${kakaoId}@gyeote.com`
         const name = profile?.kakao_account?.profile?.nickname ?? profile?.properties?.nickname ?? '사용자'
+        const kakaoEmail = `kakao_${kakaoId}@gyeote.com`
 
-        const user = await prisma.user.findFirst({ where: { email } })
-        if (!user) {
-          await prisma.user.create({ data: { email, name } })
+        const existingByKakao = await prisma.user.findFirst({ where: { email: kakaoEmail } })
+        if (existingByKakao) {
+          await prisma.user.update({
+            where: { id: existingByKakao.id },
+            data: { email, name },
+          })
+        } else {
+          const existing = await prisma.user.findFirst({ where: { email } })
+          if (!existing) {
+            await prisma.user.create({ data: { email, name } })
+          }
         }
         return true
       } catch (e) {
