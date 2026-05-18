@@ -1,6 +1,6 @@
 ﻿import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { sendKakaoAlimtalk } from '@/lib/solapi'
+import { sendKakaoAlimtalk } from '@/lib/kakao/alimtalk'
 import crypto from 'crypto'
 
 export async function POST(req: NextRequest) {
@@ -47,11 +47,9 @@ export async function POST(req: NextRequest) {
     for (const parent of parents) {
       await sendKakaoAlimtalk({
         to: parent.phone,
-        templateCode: process.env.KAKAO_ALIMTALK_TEMPLATE_CODE_REVIEW!,
-        variables: {
-          이름: parent.name,
-          리뷰링크: reviewUrl,
-        },
+        parentName: parent.name,
+        message: reviewUrl,
+        templateCode: process.env.KAKAO_ALIMTALK_TEMPLATE_CODE_REVIEW,
       })
       sent++
     }

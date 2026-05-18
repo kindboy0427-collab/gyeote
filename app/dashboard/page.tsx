@@ -151,6 +151,10 @@ export default async function Dashboard() {
         },
       },
       subscriptions: true,
+      reviews: {
+        orderBy: { createdAt: 'desc' },
+        take: 1,
+      },
     },
   })
 
@@ -172,6 +176,8 @@ export default async function Dashboard() {
   const trialDaysLeft = isTrial && activeSubscription?.nextBillingAt
     ? Math.max(0, Math.ceil((new Date(activeSubscription.nextBillingAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
     : 0
+
+  const reviews = user?.reviews ?? []
 
   return (
     <main className="min-h-screen bg-gray-50">
@@ -449,6 +455,31 @@ export default async function Dashboard() {
                   </div>
                 )
               })}
+            </div>
+          )}
+        </section>
+
+        <section className="mb-6">
+          <h2 className="text-xl font-bold text-gray-900 mb-4">후기 게시판</h2>
+          {reviews.length > 0 ? (
+            <div className="bg-white rounded-2xl border border-gray-200 p-5">
+              {reviews.map((review) => (
+                <div key={review.id} className="border-b last:border-b-0 py-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-yellow-400 text-lg">
+                      {'⭐'.repeat(review.rating)}
+                    </span>
+                    <span className="text-xs text-gray-400">{formatDate(review.createdAt)}</span>
+                  </div>
+                  <p className="text-sm text-gray-700 leading-relaxed">{review.content}</p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="bg-white rounded-2xl border border-gray-200 p-8 text-center">
+              <div className="text-4xl mb-3">💬</div>
+              <p className="text-gray-500 text-sm">아직 작성된 후기가 없어요.</p>
+              <p className="text-gray-400 text-xs mt-1">체험 종료 하루 전에 후기 요청 알림이 발송돼요.</p>
             </div>
           )}
         </section>
