@@ -17,9 +17,14 @@ export async function POST(req: NextRequest) {
         { email: session.user?.email ?? '' },
       ],
     },
+    include: { subscriptions: true },
   })
 
-  if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 })
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  // 구독 이력 확인
+  const hasSub = user.subscriptions.length > 0
+  if (!hasSub) return NextResponse.json({ error: 'no-subscription' }, { status: 403 })
 
   const reviewToken = crypto.randomBytes(20).toString('hex')
   await prisma.user.update({
@@ -27,5 +32,5 @@ export async function POST(req: NextRequest) {
     data: { reviewToken },
   })
 
-  return NextResponse.json({ token: reviewToken })
+  return NextResponse.json({ token: reviewToken, name: user.name ?? '' })
 }

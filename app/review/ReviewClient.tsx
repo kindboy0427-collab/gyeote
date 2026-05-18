@@ -10,21 +10,40 @@ function ReviewForm() {
   const [rating, setRating] = useState(0)
   const [hoverRating, setHoverRating] = useState(0)
   const [content, setContent] = useState('')
-  const [status, setStatus] = useState<'idle' | 'loading' | 'done' | 'error' | 'invalid'>('idle')
+  const [status, setStatus] = useState<'idle' | 'loading' | 'done' | 'error' | 'invalid' | 'no-subscription'>('idle')
   const [userName, setUserName] = useState('')
+  const [sessionToken, setSessionToken] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!token) {
-      setStatus('invalid')
-      return
+    if (token) {
+      // 알림톡 링크로 접속한 경우 — 토큰으로 검증
+      fetch(`/api/review/verify?token=${token}`)
+        .then((r) => r.json())
+        .then((data) => {
+          if (data.name) {
+            setUserName(data.name)
+            setSessionToken(token)
+          } else {
+            setStatus('invalid')
+          }
+        })
+        .catch(() => setStatus('invalid'))
+    } else {
+      // 직접 접속한 경우 — 세션 + 구독 이력 확인
+      fetch('/api/review/token', { method: 'POST' })
+        .then((r) => r.json())
+        .then((data) => {
+          if (data.token) {
+            setSessionToken(data.token)
+            setUserName(data.name ?? '')
+          } else if (data.error === 'no-subscription') {
+            setStatus('no-subscription')
+          } else {
+            setStatus('invalid')
+          }
+        })
+        .catch(() => setStatus('invalid'))
     }
-    fetch(`/api/review/verify?token=${token}`)
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.name) setUserName(data.name)
-        else setStatus('invalid')
-      })
-      .catch(() => setStatus('invalid'))
   }, [token])
 
   const handleSubmit = async () => {
@@ -34,7 +53,7 @@ function ReviewForm() {
     const res = await fetch('/api/review', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token, rating, content }),
+      body: JSON.stringify({ token: sessionToken, rating, content }),
     })
 
     if (res.ok) setStatus('done')
@@ -48,6 +67,18 @@ function ReviewForm() {
           <div className="text-5xl mb-4">🍂</div>
           <p className="text-gray-500 text-base">유효하지 않은 링크예요.</p>
           <p className="text-gray-400 text-sm mt-2">링크가 만료됐거나 이미 사용된 링크예요.</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (status === 'no-subscription') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#fdf9f5]">
+        <div className="text-center px-6 max-w-sm">
+          <div className="text-5xl mb-4">🌿</div>
+          <p className="text-gray-700 text-base font-medium">서비스 이용 후 작성 가능해요.</p>
+          <p className="text-gray-400 text-sm mt-2">곁에 서비스를 이용하신 분만 후기를 남길 수 있어요.</p>
         </div>
       </div>
     )
@@ -69,6 +100,15 @@ function ReviewForm() {
             <p className="text-xs text-[#b08a6e]">연장된 서비스는 대시보드에서 확인할 수 있어요</p>
           </div>
         </div>
+      </div>
+    )
+  }
+
+  // 토큰 아직 없으면 로딩
+  if (!sessionToken) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#fdf9f5]">
+        <p className="text-[#b08a6e] text-sm">확인 중...</p>
       </div>
     )
   }
@@ -143,7 +183,7 @@ function ReviewForm() {
               boxShadow: rating > 0 && content.trim().length >= 5 ? '0 4px 15px rgba(192,132,90,0.35)' : 'none',
             }}
           >
-            {status === 'loading' ? '저장 중...' : '후기 남기고 7일 연장받기 🎁'}
+            {status === 'loading' ? '저장 중...' : '후기 남기기 🌿'}
           </button>
 
           {status === 'error' && (
