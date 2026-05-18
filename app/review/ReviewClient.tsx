@@ -1,5 +1,3 @@
-export const dynamic = 'force-dynamic'
-
 'use client'
 
 import { useState, useEffect, Suspense } from 'react'
@@ -162,7 +160,7 @@ function ReviewForm() {
   )
 }
 
-export default function ReviewPage() {
+export default function ReviewClient() {
   return (
     <Suspense>
       <ReviewForm />
