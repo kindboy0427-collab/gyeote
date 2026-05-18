@@ -10,7 +10,8 @@ import PushInit from '../components/PushInit'
 import StartTrialButton from './StartTrialButton'
 import RefreshButton from './RefreshButton'
 
-const REPLY_LIMIT_HOURS = 2
+const FOLLOW_UP_AFTER_HOURS = 2
+const GUARDIAN_ALERT_AFTER_HOURS = 3
 
 type TodayResponse = {
   responded: boolean
@@ -74,7 +75,9 @@ function getStatusClass(status: string | null | undefined) {
 
 function getReplyDeadline(response: TodayResponse | null | undefined) {
   if (!response) return null
-  return new Date(new Date(response.date).getTime() + REPLY_LIMIT_HOURS * 60 * 60 * 1000)
+  return new Date(
+    new Date(response.date).getTime() + GUARDIAN_ALERT_AFTER_HOURS * 60 * 60 * 1000
+  )
 }
 
 function getReplyStatus(response: TodayResponse | null | undefined) {
