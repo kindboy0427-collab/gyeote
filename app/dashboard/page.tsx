@@ -127,11 +127,12 @@ export default async function Dashboard() {
   const kakaoId = (session.user as { id?: string })?.id
   const { start, end } = getTodayRange()
 
+  const userEmail = session.user?.email
   const user = await prisma.user.findFirst({
     where: {
       OR: [
         { email: `kakao_${kakaoId}@gyeote.com` },
-        { email: session.user?.email ?? '' },
+        ...(userEmail ? [{ email: userEmail }] : []),
       ],
     },
     include: {
