@@ -9,6 +9,7 @@ import LogoutButton from './LogoutButton'
 import PushInit from '../components/PushInit'
 import StartTrialButton from './StartTrialButton'
 import RefreshButton from './RefreshButton'
+import ReviewButton from './ReviewButton'
 
 const FOLLOW_UP_AFTER_HOURS = 2
 const GUARDIAN_ALERT_AFTER_HOURS = 3
@@ -460,7 +461,10 @@ export default async function Dashboard() {
         </section>
 
         <section className="mb-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">후기 게시판</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold text-gray-900">후기 게시판</h2>
+            <ReviewButton />
+          </div>
           {reviews.length > 0 ? (
             <div className="bg-white rounded-2xl border border-gray-200 p-5">
               {reviews.map((review) => (
