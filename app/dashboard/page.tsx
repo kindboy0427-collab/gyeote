@@ -184,6 +184,7 @@ export default async function Dashboard() {
   return (
     <main className="min-h-screen bg-gray-50">
       <PushInit />
+      <div className="text-xs text-gray-400 p-2">{session.user?.email} / kakao_{kakaoId}@gyeote.com</div>
       <header className="bg-white border-b px-6 py-4 flex items-center justify-between">
         <Link href="/" className="text-xl font-bold text-green-600">곁에</Link>
         <div className="flex items-center gap-3">
