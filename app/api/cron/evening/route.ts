@@ -119,7 +119,7 @@ export async function GET(request: NextRequest) {
       },
     })
 
-    const todayMessage = await generateTodayMessage()
+    const todayMessage = await generateTodayMessage('evening')
     const results = []
 
     for (const parent of parents) {
