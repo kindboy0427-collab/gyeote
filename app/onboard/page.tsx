@@ -32,37 +32,35 @@ export default function OnboardPage() {
     medication: '',
   })
   const [loading, setLoading] = useState(false)
+  const [copied, setCopied] = useState(false)
 
   const next = () => setStep((s) => s + 1)
 
   const openTimePicker = () => {
     const input = timeInputRef.current
     if (!input) return
-
     if (typeof input.showPicker === 'function') {
       input.showPicker()
       return
     }
-
     input.focus()
     input.click()
   }
 
   const submit = async () => {
     setLoading(true)
-
     try {
       const res = await fetch('/api/parents', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-  name: form.name,
-  phone: form.phone,
-  guardianPhone: form.guardianPhone,
-  morningTime: form.morningTime,
-  mealCheck: form.mealCheck,
-  medication: form.medication,
-}),
+          name: form.name,
+          phone: form.phone,
+          guardianPhone: form.guardianPhone,
+          morningTime: form.morningTime,
+          mealCheck: form.mealCheck,
+          medication: form.medication,
+        }),
       })
 
       if (res.ok) {
@@ -76,6 +74,12 @@ export default function OnboardPage() {
       alert('오류가 발생했습니다.')
       setLoading(false)
     }
+  }
+
+  const copyChannelLink = () => {
+    navigator.clipboard.writeText('https://pf.kakao.com/_ahnsim')
+    setCopied(true)
+    setTimeout(() => setCopied(false), 3000)
   }
 
   const inputClass =
@@ -188,7 +192,6 @@ export default function OnboardPage() {
                   <span className="text-sm text-gray-900 font-medium">
                     {formatTimeLabel(form.morningTime)}
                   </span>
-
                   <button
                     type="button"
                     onClick={openTimePicker}
@@ -201,14 +204,9 @@ export default function OnboardPage() {
 
               <div className="flex items-center justify-between p-4 border border-gray-200 rounded-xl">
                 <div>
-                  <div className="text-sm font-semibold text-gray-800">
-                    점심 식사 확인
-                  </div>
-                  <div className="text-xs text-gray-500 mt-0.5">
-                    오후 12시 30분 발송
-                  </div>
+                  <div className="text-sm font-semibold text-gray-800">점심 식사 확인</div>
+                  <div className="text-xs text-gray-500 mt-0.5">오후 12시 30분 발송</div>
                 </div>
-
                 <button
                   type="button"
                   onClick={() => setForm({ ...form, mealCheck: !form.mealCheck })}
@@ -284,7 +282,7 @@ export default function OnboardPage() {
             <h2 className="text-xl font-bold text-gray-800 mb-2">
               {form.name}님 등록 완료!
             </h2>
-            <p className="text-sm text-gray-500 mb-2">
+            <p className="text-sm text-gray-500 mb-6">
               내일 아침{' '}
               <span className="font-bold text-green-600">
                 {formatTimeLabel(form.morningTime)}
@@ -293,9 +291,27 @@ export default function OnboardPage() {
               <br />
               첫 안부 메시지가 발송돼요.
             </p>
-            <p className="text-xs text-gray-400 mb-8">
-              카카오톡 채널 ‘곁에’를 통해 메시지가 전송됩니다.
-            </p>
+
+            <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-6 text-left">
+              <p className="text-sm font-bold text-yellow-800 mb-1">
+                📌 부모님 채널 추가 필요
+              </p>
+              <p className="text-xs text-yellow-700 mb-3">
+                부모님이 메시지에 답장하시려면 카카오 채널 추가가 필요해요.
+                아래 링크를 부모님께 카카오톡으로 보내주세요.
+              </p>
+              <button
+                onClick={copyChannelLink}
+                className={`w-full py-2.5 rounded-xl text-sm font-bold transition-colors ${
+                  copied
+                    ? 'bg-green-500 text-white'
+                    : 'bg-yellow-400 text-gray-800'
+                }`}
+              >
+                {copied ? '✅ 복사됐어요! 부모님께 카카오톡으로 보내주세요' : '채널 추가 링크 복사하기'}
+              </button>
+            </div>
+
             <button
               onClick={() => router.push('/dashboard')}
               className="w-full bg-green-500 text-white py-3 rounded-xl font-semibold"

@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+﻿import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import {
   createMorningAlimtalkMessage,
@@ -63,7 +63,7 @@ function getCurrentKstHHmm() {
 
 function getCurrentKstHour() {
   const parts = getKstParts()
-  return parts.hour // "09", "10" 등
+  return parts.hour
 }
 
 function getTodayKstRange() {
@@ -88,14 +88,11 @@ export async function GET(request: NextRequest) {
     const forceRun = new URL(request.url).searchParams.get('force') === 'true'
     const { start, end } = getTodayKstRange()
     const currentKstHHmm = getCurrentKstHHmm()
-    const currentKstHour = getCurrentKstHour() // "09"
+    const currentKstHour = getCurrentKstHour()
 
-    // 현재 KST 시간(시)과 morningTime의 시(시)가 같은 부모님만 조회
     const parents = await prisma.parent.findMany({
       where: {
         isActive: true,
-        // morningTime이 현재 시간대와 일치하는 부모님만
-        // 예: 현재 09시면 "09:00", "09:30" 등 전부 포함
         morningTime: {
           startsWith: currentKstHour + ':',
         },
@@ -149,7 +146,6 @@ export async function GET(request: NextRequest) {
     }> = []
 
     for (const parent of parents) {
-      // 오늘 이미 발송했으면 스킵
       if (parent.responses.length > 0) {
         results.push({
           parentId: parent.id,
@@ -170,7 +166,7 @@ export async function GET(request: NextRequest) {
       const alimtalkResult = await sendKakaoAlimtalk({
         to: parent.phone,
         parentName: parent.name,
-        message,
+        message: todayMessage,
         templateCode: process.env.KAKAO_ALIMTALK_TEMPLATE_CODE_MORNING,
       })
 
