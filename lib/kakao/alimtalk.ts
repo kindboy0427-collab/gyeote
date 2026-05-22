@@ -81,7 +81,7 @@ function getAlimtalkConfig(templateCode?: string): AlimtalkConfig {
   }
 }
 
-export async function generateTodayMessage(): Promise<string> {
+export async function generateTodayMessage(timeOfDay: 'morning' | 'lunch' | 'evening' = 'morning'): Promise<string> {
   try {
     const today = new Date()
     const days = ['일요일', '월요일', '화요일', '수요일', '목요일', '금요일', '토요일']
@@ -93,6 +93,13 @@ export async function generateTodayMessage(): Promise<string> {
       today.getMonth() >= 2 && today.getMonth() <= 4 ? '봄' :
       today.getMonth() >= 5 && today.getMonth() <= 7 ? '여름' :
       today.getMonth() >= 8 && today.getMonth() <= 10 ? '가을' : '겨울'
+
+    const timeLabel = timeOfDay === 'morning' ? '아침' : timeOfDay === 'lunch' ? '점심' : '저녁'
+    const tone = timeOfDay === 'morning'
+      ? '오늘 하루 활기차게 시작하시길 바라는 따뜻한 아침 인사 톤'
+      : timeOfDay === 'lunch'
+      ? '점심 식사 잘 하셨는지 챙기는 따뜻한 안부 톤'
+      : '오늘 하루 수고하셨다는 격려와 따뜻한 위로의 저녁 톤'
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -108,14 +115,15 @@ export async function generateTodayMessage(): Promise<string> {
           {
             role: 'user',
             content: `오늘은 ${month} ${date}일 ${dayOfWeek}이고 ${season}입니다.
-자녀를 대신해서 부모님께 보내는 저녁 안부 한마디를 써주세요.
+자녀를 대신해서 부모님께 보내는 ${timeLabel} 안부 한마디를 써주세요.
 조건:
 - 2~3문장으로 짧게
-- 오늘 하루 수고하셨다는 격려와 고생했다는 따뜻한 위로의 톤
+- ${tone}
 - 오늘 날씨, 요일, 계절을 자연스럽게 녹여서
 - 진심이 느껴지고 감성적으로
 - 존댓말 사용
 - 이모지 1개 포함
+- "아프거나", "불편하신", "곁에 있을게요", "항상 당신" 문구 절대 포함하지 말 것
 - 앞뒤 설명 없이 문구만 출력`,
           },
         ],
@@ -154,21 +162,21 @@ export async function sendKakaoAlimtalk({
     }
 
     const payload = {
-  message: {
-    to: normalizePhoneNumber(to),
-    from: '01045788368',
-    type: 'ATA',
-    kakaoOptions: {
-      pfId: config.senderKey,
-      templateId: config.templateCode,
-      disableSms: true,
-      variables: {
-        '#{이름}': parentName,
-        '#{오늘의한마디}': message,
+      message: {
+        to: normalizePhoneNumber(to),
+        from: '01045788368',
+        type: 'ATA',
+        kakaoOptions: {
+          pfId: config.senderKey,
+          templateId: config.templateCode,
+          disableSms: true,
+          variables: {
+            '#{이름}': parentName,
+            '#{오늘의한마디}': message,
+          },
+        },
       },
-    },
-  },
-}
+    }
 
     const authHeader = getSolapiAuthHeader(config.apiKey, config.apiSecret)
 
