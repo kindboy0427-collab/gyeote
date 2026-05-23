@@ -78,10 +78,14 @@ export async function POST(request: NextRequest) {
   // 못 찾으면 kakaoId 없는 가장 최근 부모님에 자동 저장 (채널 추가 시)
   if (!parent) {
   // 전화번호로 매칭 시도
-  const normalizedPhone = utterance.replace(/[^0-9]/g, '')
-  if (normalizedPhone.length >= 10) {
-    const parentByPhone = await prisma.parent.findFirst({
-      where: { phone: normalizedPhone },
+  let normalizedPhone = utterance.replace(/[^0-9]/g, '')
+// 국제번호 형식 처리 (82로 시작하면 0으로 교체)
+if (normalizedPhone.startsWith('82') && normalizedPhone.length === 11) {
+  normalizedPhone = '0' + normalizedPhone.slice(2)
+}
+if (normalizedPhone.length >= 10) {
+  const parentByPhone = await prisma.parent.findFirst({
+    where: { phone: normalizedPhone },
       select: { id: true, name: true, phone: true, userId: true },
     })
     if (parentByPhone) {
