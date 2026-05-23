@@ -1,26 +1,37 @@
 ﻿'use client'
 
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 
 function formatTimeLabel(time: string) {
   const [hourText, minuteText] = time.split(':')
   const hour = Number(hourText)
   const minute = Number(minuteText)
-
-  if (Number.isNaN(hour) || Number.isNaN(minute)) {
-    return time
-  }
-
+  if (Number.isNaN(hour) || Number.isNaN(minute)) return time
   const period = hour < 12 ? '오전' : '오후'
   const displayHour = hour % 12 === 0 ? 12 : hour % 12
-
   return `${period} ${String(displayHour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`
+}
+
+function timeToValues(time: string) {
+  const [hourText, minuteText] = time.split(':')
+  const hour = Number(hourText)
+  const minute = Number(minuteText)
+  return {
+    period: hour < 12 ? 'AM' : 'PM',
+    hour: hour % 12 === 0 ? 12 : hour % 12,
+    minute,
+  }
+}
+
+function valuesToTime(period: string, hour: number, minute: number) {
+  let h = hour % 12
+  if (period === 'PM') h += 12
+  return `${String(h).padStart(2, '0')}:${String(minute).padStart(2, '0')}`
 }
 
 export default function OnboardPage() {
   const router = useRouter()
-  const timeInputRef = useRef<HTMLInputElement | null>(null)
 
   const [step, setStep] = useState(1)
   const [form, setForm] = useState({
@@ -31,20 +42,17 @@ export default function OnboardPage() {
     mealCheck: true,
     medication: '',
   })
+  const [timeValues, setTimeValues] = useState(timeToValues('09:00'))
   const [loading, setLoading] = useState(false)
   const [copied, setCopied] = useState(false)
 
   const next = () => setStep((s) => s + 1)
 
-  const openTimePicker = () => {
-    const input = timeInputRef.current
-    if (!input) return
-    if (typeof input.showPicker === 'function') {
-      input.showPicker()
-      return
-    }
-    input.focus()
-    input.click()
+  const handleTimeChange = (field: 'period' | 'hour' | 'minute', value: string | number) => {
+    const newValues = { ...timeValues, [field]: field === 'period' ? value : Number(value) }
+    setTimeValues(newValues)
+    const newTime = valuesToTime(newValues.period, newValues.hour, newValues.minute)
+    setForm({ ...form, morningTime: newTime })
   }
 
   const submit = async () => {
@@ -62,7 +70,6 @@ export default function OnboardPage() {
           medication: form.medication,
         }),
       })
-
       if (res.ok) {
         setStep(4)
       } else {
@@ -85,6 +92,9 @@ export default function OnboardPage() {
   const inputClass =
     'w-full border border-gray-300 rounded-xl px-4 py-3 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-green-400'
 
+  const selectClass =
+    'border border-gray-300 rounded-xl px-3 py-3 text-sm text-gray-900 focus:outline-none focus:border-green-400 bg-white'
+
   return (
     <main className="min-h-screen bg-gray-50 flex flex-col items-center justify-center px-4">
       <div className="w-full max-w-sm">
@@ -93,9 +103,7 @@ export default function OnboardPage() {
             {[1, 2, 3].map((i) => (
               <div
                 key={i}
-                className={`flex-1 h-1.5 rounded-full ${
-                  step >= i ? 'bg-green-500' : 'bg-gray-200'
-                }`}
+                className={`flex-1 h-1.5 rounded-full ${step >= i ? 'bg-green-500' : 'bg-gray-200'}`}
               />
             ))}
           </div>
@@ -104,15 +112,11 @@ export default function OnboardPage() {
         {step === 1 && (
           <div className="bg-white rounded-2xl p-6 shadow-sm">
             <h2 className="text-xl font-bold text-gray-800 mb-1">부모님 기본 정보</h2>
-            <p className="text-sm text-gray-500 mb-6">
-              1/3 · 성함과 전화번호를 입력해주세요
-            </p>
+            <p className="text-sm text-gray-500 mb-6">1/3 · 성함과 전화번호를 입력해주세요</p>
 
             <div className="flex flex-col gap-4">
               <div>
-                <label className="text-sm font-semibold text-gray-700 mb-1.5 block">
-                  부모님 성함
-                </label>
+                <label className="text-sm font-semibold text-gray-700 mb-1.5 block">부모님 성함</label>
                 <input
                   type="text"
                   placeholder="예) 홍길동"
@@ -121,11 +125,8 @@ export default function OnboardPage() {
                   className={inputClass}
                 />
               </div>
-
               <div>
-                <label className="text-sm font-semibold text-gray-700 mb-1.5 block">
-                  부모님 전화번호
-                </label>
+                <label className="text-sm font-semibold text-gray-700 mb-1.5 block">부모님 전화번호</label>
                 <input
                   type="tel"
                   placeholder="010-0000-0000"
@@ -134,11 +135,8 @@ export default function OnboardPage() {
                   className={inputClass}
                 />
               </div>
-
               <div>
-                <label className="text-sm font-semibold text-gray-700 mb-1.5 block">
-                  보호자 전화번호
-                </label>
+                <label className="text-sm font-semibold text-gray-700 mb-1.5 block">보호자 전화번호</label>
                 <input
                   type="tel"
                   placeholder="010-0000-0000"
@@ -146,11 +144,8 @@ export default function OnboardPage() {
                   onChange={(e) => setForm({ ...form, guardianPhone: e.target.value })}
                   className={inputClass}
                 />
-                <p className="text-xs text-gray-400 mt-1.5">
-                  3시간 이상 답장이 없을 때 즉각 알림을 받을 번호입니다.
-                </p>
+                <p className="text-xs text-gray-400 mt-1.5">3시간 이상 답장이 없을 때 즉각 알림을 받을 번호입니다.</p>
               </div>
-
               <div className="bg-green-50 border border-green-100 rounded-xl p-3 text-xs text-green-700 font-medium">
                 부모님 번호로 카카오톡 안부 메시지가 발송됩니다.
               </div>
@@ -169,37 +164,42 @@ export default function OnboardPage() {
         {step === 2 && (
           <div className="bg-white rounded-2xl p-6 shadow-sm">
             <h2 className="text-xl font-bold text-gray-800 mb-1">시간 설정</h2>
-            <p className="text-sm text-gray-500 mb-6">
-              2/3 · 안부 확인 시간을 설정해주세요
-            </p>
+            <p className="text-sm text-gray-500 mb-6">2/3 · 안부 확인 시간을 설정해주세요</p>
 
             <div className="flex flex-col gap-4">
               <div>
-                <label className="text-sm font-semibold text-gray-700 mb-1.5 block">
-                  아침 안부 시간
-                </label>
-
-                <input
-                  ref={timeInputRef}
-                  type="time"
-                  value={form.morningTime}
-                  onChange={(e) => setForm({ ...form, morningTime: e.target.value })}
-                  className="sr-only"
-                  aria-label="아침 안부 시간"
-                />
-
-                <div className="w-full border border-gray-300 rounded-xl px-4 py-3 flex items-center justify-between">
-                  <span className="text-sm text-gray-900 font-medium">
-                    {formatTimeLabel(form.morningTime)}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={openTimePicker}
-                    className="text-sm font-semibold text-green-600"
+                <label className="text-sm font-semibold text-gray-700 mb-1.5 block">아침 안부 시간</label>
+                <div className="flex gap-2">
+                  <select
+                    value={timeValues.period}
+                    onChange={(e) => handleTimeChange('period', e.target.value)}
+                    className={selectClass}
                   >
-                    시간 변경
-                  </button>
+                    <option value="AM">오전</option>
+                    <option value="PM">오후</option>
+                  </select>
+                  <select
+                    value={timeValues.hour}
+                    onChange={(e) => handleTimeChange('hour', e.target.value)}
+                    className={`${selectClass} flex-1`}
+                  >
+                    {Array.from({ length: 12 }, (_, i) => i + 1).map((h) => (
+                      <option key={h} value={h}>{String(h).padStart(2, '0')}시</option>
+                    ))}
+                  </select>
+                  <select
+                    value={timeValues.minute}
+                    onChange={(e) => handleTimeChange('minute', e.target.value)}
+                    className={`${selectClass} flex-1`}
+                  >
+                    {[0, 10, 20, 30, 40, 50].map((m) => (
+                      <option key={m} value={m}>{String(m).padStart(2, '0')}분</option>
+                    ))}
+                  </select>
                 </div>
+                <p className="text-xs text-gray-400 mt-1.5">
+                  선택된 시간: <span className="font-semibold text-green-600">{formatTimeLabel(form.morningTime)}</span>
+                </p>
               </div>
 
               <div className="flex items-center justify-between p-4 border border-gray-200 rounded-xl">
@@ -210,15 +210,9 @@ export default function OnboardPage() {
                 <button
                   type="button"
                   onClick={() => setForm({ ...form, mealCheck: !form.mealCheck })}
-                  className={`w-12 h-6 rounded-full transition-colors ${
-                    form.mealCheck ? 'bg-green-500' : 'bg-gray-200'
-                  }`}
+                  className={`w-12 h-6 rounded-full transition-colors ${form.mealCheck ? 'bg-green-500' : 'bg-gray-200'}`}
                 >
-                  <div
-                    className={`w-5 h-5 bg-white rounded-full shadow transition-transform mx-0.5 ${
-                      form.mealCheck ? 'translate-x-6' : ''
-                    }`}
-                  />
+                  <div className={`w-5 h-5 bg-white rounded-full shadow transition-transform mx-0.5 ${form.mealCheck ? 'translate-x-6' : ''}`} />
                 </button>
               </div>
 
@@ -279,23 +273,15 @@ export default function OnboardPage() {
         {step === 4 && (
           <div className="bg-white rounded-2xl p-8 shadow-sm text-center">
             <div className="text-6xl mb-5">🎉</div>
-            <h2 className="text-xl font-bold text-gray-800 mb-2">
-              {form.name}님 등록 완료!
-            </h2>
+            <h2 className="text-xl font-bold text-gray-800 mb-2">{form.name}님 등록 완료!</h2>
             <p className="text-sm text-gray-500 mb-6">
               내일 아침{' '}
-              <span className="font-bold text-green-600">
-                {formatTimeLabel(form.morningTime)}
-              </span>
-              에
-              <br />
-              첫 안부 메시지가 발송돼요.
+              <span className="font-bold text-green-600">{formatTimeLabel(form.morningTime)}</span>
+              에<br />첫 안부 메시지가 발송돼요.
             </p>
 
             <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-6 text-left">
-              <p className="text-sm font-bold text-yellow-800 mb-1">
-                📌 부모님 채널 추가 필요
-              </p>
+              <p className="text-sm font-bold text-yellow-800 mb-1">📌 부모님 채널 추가 필요</p>
               <p className="text-xs text-yellow-700 mb-3">
                 부모님이 메시지에 답장하시려면 카카오 채널 추가가 필요해요.
                 아래 링크를 부모님께 카카오톡으로 보내주세요.
@@ -303,9 +289,7 @@ export default function OnboardPage() {
               <button
                 onClick={copyChannelLink}
                 className={`w-full py-2.5 rounded-xl text-sm font-bold transition-colors ${
-                  copied
-                    ? 'bg-green-500 text-white'
-                    : 'bg-yellow-400 text-gray-800'
+                  copied ? 'bg-green-500 text-white' : 'bg-yellow-400 text-gray-800'
                 }`}
               >
                 {copied ? '✅ 복사됐어요! 부모님께 카카오톡으로 보내주세요' : '채널 추가 링크 복사하기'}
