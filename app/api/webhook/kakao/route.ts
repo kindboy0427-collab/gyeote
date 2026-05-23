@@ -9,12 +9,8 @@ const KST_TIME_ZONE = 'Asia/Seoul'
 function getKstParts(date = new Date()) {
   const formatter = new Intl.DateTimeFormat('en-CA', {
     timeZone: KST_TIME_ZONE,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
     hourCycle: 'h23',
   })
   const parts = formatter.formatToParts(date)
@@ -61,9 +57,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: false, message: 'Invalid JSON' }, { status: 400 })
   }
 
-  console.log('[KAKAO_WEBHOOK] body:', JSON.stringify(body))
-
-  // kakaoId 추출
   const userRequest = body.userRequest as Record<string, unknown> | undefined
   const user = userRequest?.user as Record<string, unknown> | undefined
   const properties = user?.properties as Record<string, unknown> | undefined
@@ -77,16 +70,32 @@ export async function POST(request: NextRequest) {
   const utterance = (userRequest?.utterance as string) ?? ''
 
   // kakaoId로 부모님 조회
-  const parent = await prisma.parent.findFirst({
+  let parent = await prisma.parent.findFirst({
     where: { kakaoId },
     select: { id: true, name: true, phone: true, userId: true },
   })
 
+  // 못 찾으면 kakaoId 없는 가장 최근 부모님에 자동 저장 (채널 추가 시)
   if (!parent) {
-    // kakaoId 저장 시도 (웰컴 블록 또는 첫 발화)
-    console.log(`[KAKAO_WEBHOOK] 매칭 부모 없음 - kakaoId: ${kakaoId}`)
-    return NextResponse.json({ ok: true, message: 'No matched parent - ignored' })
+  // 전화번호로 매칭 시도
+  const normalizedPhone = utterance.replace(/[^0-9]/g, '')
+  if (normalizedPhone.length >= 10) {
+    const parentByPhone = await prisma.parent.findFirst({
+      where: { phone: normalizedPhone },
+      select: { id: true, name: true, phone: true, userId: true },
+    })
+    if (parentByPhone) {
+      await prisma.parent.update({
+        where: { id: parentByPhone.id },
+        data: { kakaoId },
+      })
+      console.log(`[KAKAO_WEBHOOK] kakaoId 저장: ${parentByPhone.name}(${normalizedPhone}) → ${kakaoId}`)
+      return NextResponse.json({ ok: true, message: 'kakaoId saved' })
+    }
   }
+  console.log(`[KAKAO_WEBHOOK] 매칭 부모 없음 - kakaoId: ${kakaoId}`)
+  return NextResponse.json({ ok: true, message: 'No matched parent - ignored' })
+}
 
   const now = new Date()
   const kstHour = Number(getKstParts(now).hour)
