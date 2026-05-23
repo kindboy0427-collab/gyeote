@@ -30,10 +30,9 @@ function getKstParts(date = new Date()) {
     hourCycle: 'h23',
   })
   const parts = formatter.formatToParts(date)
-  const values = Object.fromEntries(
+  return Object.fromEntries(
     parts.filter((p) => p.type !== 'literal').map((p) => [p.type, p.value])
   )
-  return values
 }
 
 function getCurrentKstHHmm() {
@@ -64,20 +63,21 @@ function isWithinSendWindow(currentHHmm: string) {
 }
 
 function isFriday() {
-  const today = new Date()
-  const formatter = new Intl.DateTimeFormat('en-CA', {
-    timeZone: KST_TIME_ZONE,
-    weekday: 'long',
-  })
-  return formatter.format(today) === 'Friday'
+  const formatter = new Intl.DateTimeFormat('en-CA', { timeZone: KST_TIME_ZONE, weekday: 'long' })
+  return formatter.format(new Date()) === 'Friday'
+}
+
+function isWeekendKst(): boolean {
+  const day = new Date().toLocaleDateString('en-US', { timeZone: KST_TIME_ZONE, weekday: 'long' })
+  return day === 'Saturday' || day === 'Sunday'
 }
 
 function createEveningMessage(parentName: string, todayMessage: string) {
-  return `${parentName}?? ?�늘 ?�루???�말 ?�고 많으?�어???��\n\n${todayMessage}\n\n매일 건강?�게 계셔주시??것만?�로??n곁에 ?�는 ?�리 모두가 ?�복?�요 ?��\n\n??�� ?�신 곁에 ?�을게요.\n- 곁에`
+  return `${parentName}님, 오늘 하루도 정말 수고 많으셨어요 🌙\n\n${todayMessage}\n\n매일 건강하게 계셔주시는 것만으로도\n곁에 있는 우리 모두가 행복해요 ❤️\n\n항상 당신 곁에 있을게요.\n- 곁에`
 }
 
 function createFridayEveningMessage(parentName: string, todayMessage: string) {
-  return `${parentName}?? ??�??�안 ?�말 ?�고 많으?�어???��\n\n${todayMessage}\n\n?��?분께 ?�하�??��? 말�????�으?��??? ?��\n?�로???�굴??마주?��? ?�고 글�?진심???�하??�?n??깊게 ?�?�을 ?��? ?�더?�구??\n\n짧�? ??마디??괜찮?�요.\n매주 금요?? 곁에가 ?��?분께 ?�달???�릴게요 ?��\n\n??�� ?�신 곁에 ?�을게요.\n- 곁에`
+  return `${parentName}님, 한 주 동안 정말 수고 많으셨어요 🌙\n\n${todayMessage}\n\n자녀분께 전하고 싶은 말씀이 있으신가요? 😊\n때로는 얼굴을 마주하지 않고 글로 진심을 전하는 게\n더 깊게 와닿을 때가 있더라구요.\n\n짧은 한 마디도 괜찮아요.\n매주 금요일, 곁에가 그 마음을 자녀분께 전달할게요 💌\n\n항상 당신 곁에 있을게요.\n- 곁에`
 }
 
 export async function GET(request: NextRequest) {
@@ -86,20 +86,25 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ ok: false, message: 'Unauthorized' }, { status: 401 })
     }
 
-    const currentKstHHmm = getCurrentKstHHmm()
-    const { start, end } = getTodayKstRange()
     const forceRun = new URL(request.url).searchParams.get('force') === 'true'
     const forceFriday = new URL(request.url).searchParams.get('friday') === 'true'
     const friday = forceFriday || isFriday()
 
+    if (!forceRun && isWeekendKst()) {
+      return NextResponse.json({ ok: true, blocked: true, message: '주말에는 발송하지 않습니다.' })
+    }
+
+    const currentKstHHmm = getCurrentKstHHmm()
+    const { start, end } = getTodayKstRange()
+
     if (!forceRun && !isWithinSendWindow(currentKstHHmm)) {
       return NextResponse.json({
-       ok: true,
-       blocked: true,
-       message: `저녁 알림 허용 시간(${SEND_START_HHMM}~${SEND_END_HHMM}) 밖입니다.`,
-       currentKstHHmm,
-  })
-}
+        ok: true,
+        blocked: true,
+        message: `저녁 알림 허용 시간(${SEND_START_HHMM}~${SEND_END_HHMM}) 밖입니다.`,
+        currentKstHHmm,
+      })
+    }
 
     const parents = await prisma.parent.findMany({
       where: {
@@ -112,10 +117,7 @@ export async function GET(request: NextRequest) {
       },
       include: {
         responses: {
-          where: {
-            date: { gte: start, lte: end },
-            type: 'evening',
-          },
+          where: { date: { gte: start, lte: end }, type: 'evening' },
           take: 1,
         },
       },
@@ -139,12 +141,7 @@ export async function GET(request: NextRequest) {
         : process.env.KAKAO_ALIMTALK_TEMPLATE_CODE_EVENING
 
       await prisma.response.create({
-        data: {
-          parentId: parent.id,
-          responded: false,
-          message,
-          type: 'evening',
-        },
+        data: { parentId: parent.id, responded: false, message, type: 'evening' },
       })
 
       const alimtalkResult = await sendKakaoAlimtalk({
@@ -177,7 +174,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ ok: true, currentKstHHmm, friday, results })
   } catch (error) {
     return NextResponse.json(
-      { ok: false, message: error instanceof Error ? error.message : '?�???�론 ?�류' },
+      { ok: false, message: error instanceof Error ? error.message : '저녁 Cron 오류' },
       { status: 500 }
     )
   }

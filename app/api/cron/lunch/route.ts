@@ -33,9 +33,7 @@ function getKstParts(date = new Date()) {
     second: '2-digit',
     hourCycle: 'h23',
   })
-
   const parts = formatter.formatToParts(date)
-
   return Object.fromEntries(
     parts.filter((part) => part.type !== 'literal').map((part) => [part.type, part.value])
   )
@@ -48,7 +46,6 @@ function getCurrentKstHHmm() {
 
 function getTodayKstRange() {
   const parts = getKstParts()
-
   return {
     start: new Date(`${parts.year}-${parts.month}-${parts.day}T00:00:00.000+09:00`),
     end: new Date(`${parts.year}-${parts.month}-${parts.day}T23:59:59.999+09:00`),
@@ -57,11 +54,7 @@ function getTodayKstRange() {
 
 function hhmmToMinutes(hhmm: string) {
   const [hour, minute] = hhmm.split(':').map(Number)
-
-  if (Number.isNaN(hour) || Number.isNaN(minute)) {
-    return null
-  }
-
+  if (Number.isNaN(hour) || Number.isNaN(minute)) return null
   return hour * 60 + minute
 }
 
@@ -69,39 +62,20 @@ function isWithinSendWindow(currentHHmm: string) {
   const current = hhmmToMinutes(currentHHmm)
   const start = hhmmToMinutes(SEND_START_HHMM)
   const end = hhmmToMinutes(SEND_END_HHMM)
-
-  if (current === null || start === null || end === null) {
-    return false
-  }
-
+  if (current === null || start === null || end === null) return false
   return current >= start && current <= end
 }
 
-function createLunchMessage(
-  parentName: string,
-  todayMessage: string,
-  medication: string | null
-) {
+function isWeekendKst(): boolean {
+  const day = new Date().toLocaleDateString('en-US', { timeZone: KST_TIME_ZONE, weekday: 'long' })
+  return day === 'Saturday' || day === 'Sunday'
+}
+
+function createLunchMessage(parentName: string, todayMessage: string, medication: string | null) {
   if (medication) {
-    return `${parentName}님, 점심은 챙겨 드셨나요?
-
-${todayMessage}
-
-그리고 오늘 ${medication}도 잊지 않고 챙겨 주세요.
-작은 습관이 건강을 지켜드려요.
-
-항상 곁에 있을게요.
-- 곁에`
+    return `${parentName}님, 점심은 챙겨 드셨나요?\n\n${todayMessage}\n\n그리고 오늘 ${medication}도 잊지 않고 챙겨 주세요.\n작은 습관이 건강을 지켜드려요.\n\n항상 곁에 있을게요.\n- 곁에`
   }
-
-  return `${parentName}님, 점심은 챙겨 드셨나요?
-
-${todayMessage}
-
-맛있게 식사하시고 오후도 편안하게 보내세요.
-
-항상 곁에 있을게요.
-- 곁에`
+  return `${parentName}님, 점심은 챙겨 드셨나요?\n\n${todayMessage}\n\n맛있게 식사하시고 오후도 편안하게 보내세요.\n\n항상 곁에 있을게요.\n- 곁에`
 }
 
 export async function GET(request: NextRequest) {
@@ -110,9 +84,14 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ ok: false, message: 'Unauthorized' }, { status: 401 })
     }
 
+    const forceRun = new URL(request.url).searchParams.get('force') === 'true'
+
+    if (!forceRun && isWeekendKst()) {
+      return NextResponse.json({ ok: true, blocked: true, message: '주말에는 발송하지 않습니다.' })
+    }
+
     const currentKstHHmm = getCurrentKstHHmm()
     const { start, end } = getTodayKstRange()
-    const forceRun = new URL(request.url).searchParams.get('force') === 'true'
 
     if (!forceRun && !isWithinSendWindow(currentKstHHmm)) {
       return NextResponse.json({
@@ -135,10 +114,7 @@ export async function GET(request: NextRequest) {
       },
       include: {
         responses: {
-          where: {
-            date: { gte: start, lte: end },
-            type: 'lunch',
-          },
+          where: { date: { gte: start, lte: end }, type: 'lunch' },
           take: 1,
         },
       },
@@ -149,12 +125,7 @@ export async function GET(request: NextRequest) {
 
     for (const parent of parents) {
       if (parent.responses.length > 0) {
-        results.push({
-          parentId: parent.id,
-          parentName: parent.name,
-          status: 'already_exists',
-        })
-
+        results.push({ parentId: parent.id, parentName: parent.name, status: 'already_exists' })
         continue
       }
 
@@ -166,12 +137,7 @@ export async function GET(request: NextRequest) {
       const message = createLunchMessage(parent.name, todayMessage, medication)
 
       await prisma.response.create({
-        data: {
-          parentId: parent.id,
-          responded: false,
-          message,
-          type: 'lunch',
-        },
+        data: { parentId: parent.id, responded: false, message, type: 'lunch' },
       })
 
       const alimtalkResult = await sendKakaoAlimtalk({
@@ -191,13 +157,7 @@ export async function GET(request: NextRequest) {
           status: alimtalkResult.success ? 'sent' : 'failed',
           message,
           error: alimtalkResult.reason ?? alimtalkResult.error ?? null,
-          rawData: JSON.parse(
-            JSON.stringify({
-              kind: medication ? 'LUNCH_MEDICATION' : 'LUNCH',
-              medication,
-              ...alimtalkResult,
-            })
-          ),
+          rawData: JSON.parse(JSON.stringify({ kind: medication ? 'LUNCH_MEDICATION' : 'LUNCH', medication, ...alimtalkResult })),
         },
       })
 
@@ -209,21 +169,10 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    return NextResponse.json({
-      ok: true,
-      currentKstHHmm,
-      count: results.length,
-      results,
-    })
+    return NextResponse.json({ ok: true, currentKstHHmm, count: results.length, results })
   } catch (error) {
     return NextResponse.json(
-      {
-        ok: false,
-        message:
-          error instanceof Error
-            ? error.message
-            : '점심 Cron 처리 중 오류가 발생했습니다.',
-      },
+      { ok: false, message: error instanceof Error ? error.message : '점심 Cron 처리 중 오류가 발생했습니다.' },
       { status: 500 }
     )
   }

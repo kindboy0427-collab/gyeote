@@ -63,7 +63,7 @@ function getCurrentKstHHmm() {
 
 function getCurrentKstHour() {
   const parts = getKstParts()
-  return parts.hour // "09", "10" 등
+  return parts.hour
 }
 
 function getTodayKstRange() {
@@ -79,6 +79,11 @@ function getLogStatus(statusText: 'sent' | 'failed' | 'skipped') {
   return 'failed'
 }
 
+function isWeekendKst(): boolean {
+  const day = new Date().toLocaleDateString('en-US', { timeZone: KST_TIME_ZONE, weekday: 'long' })
+  return day === 'Saturday' || day === 'Sunday'
+}
+
 export async function GET(request: NextRequest) {
   try {
     if (!isCronAuthorized(request)) {
@@ -86,19 +91,19 @@ export async function GET(request: NextRequest) {
     }
 
     const forceRun = new URL(request.url).searchParams.get('force') === 'true'
+
+    if (!forceRun && isWeekendKst()) {
+      return NextResponse.json({ ok: true, blocked: true, message: '주말에는 발송하지 않습니다.' })
+    }
+
     const { start, end } = getTodayKstRange()
     const currentKstHHmm = getCurrentKstHHmm()
-    const currentKstHour = getCurrentKstHour() // "09"
+    const currentKstHour = getCurrentKstHour()
 
-    // 현재 KST 시간(시)과 morningTime의 시(시)가 같은 부모님만 조회
     const parents = await prisma.parent.findMany({
       where: {
         isActive: true,
-        // morningTime이 현재 시간대와 일치하는 부모님만
-        // 예: 현재 09시면 "09:00", "09:30" 등 전부 포함
-        morningTime: {
-          startsWith: currentKstHour + ':',
-        },
+        morningTime: { startsWith: currentKstHour + ':' },
         user: {
           subscriptions: {
             some: { status: { in: ['active', 'trial'] } },
@@ -149,7 +154,6 @@ export async function GET(request: NextRequest) {
     }> = []
 
     for (const parent of parents) {
-      // 오늘 이미 발송했으면 스킵
       if (parent.responses.length > 0) {
         results.push({
           parentId: parent.id,
@@ -168,11 +172,11 @@ export async function GET(request: NextRequest) {
       })
 
       const alimtalkResult = await sendKakaoAlimtalk({
-         to: parent.phone,
-         parentName: parent.name,
-         message: todayMessage,
-         templateCode: process.env.KAKAO_ALIMTALK_TEMPLATE_CODE_MORNING,
-        })
+        to: parent.phone,
+        parentName: parent.name,
+        message: todayMessage,
+        templateCode: process.env.KAKAO_ALIMTALK_TEMPLATE_CODE_MORNING,
+      })
 
       const logStatus = getLogStatus(alimtalkResult.statusText)
 
