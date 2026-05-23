@@ -122,13 +122,13 @@ export async function POST(request: NextRequest) {
   const { start, end } = getTodayKstRange()
 
   const existing = await prisma.response.findFirst({
-    where: {
-      parentId: parent.id,
-      type: responseType,
-      date: { gte: start, lte: end },
-    },
-    orderBy: { date: 'desc' },
-  })
+  where: {
+    parentId: parent.id,
+    responded: false,
+    date: { gte: start, lte: end },
+  },
+  orderBy: { date: 'desc' },
+})
 
   const response = existing
     ? await prisma.response.update({
