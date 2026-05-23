@@ -132,6 +132,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: false, message: 'Invalid JSON' }, { status: 400 })
   }
 
+  console.log('[KAKAO_WEBHOOK] body:', JSON.stringify(body))
   const { fromPhone, text, messageId } = parsePayload(body)
 
   if (!fromPhone) {
