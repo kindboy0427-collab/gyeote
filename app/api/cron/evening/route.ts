@@ -145,8 +145,8 @@ export async function GET(request: NextRequest) {
       })
 
       const linkUrl = friday
-        ? `gyeote-eight.vercel.app/message/${newResponse.id}`
-       : undefined
+         ? `gyeote-eight.vercel.app/message/${newResponse.id}`
+         : undefined
 
       const alimtalkResult = await sendKakaoAlimtalk({
         to: parent.phone,

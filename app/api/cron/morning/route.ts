@@ -103,7 +103,7 @@ export async function GET(request: NextRequest) {
     const parents = await prisma.parent.findMany({
       where: {
         isActive: true,
-        ...(forceRun ? {} : { morningTime: { startsWith: currentKstHour + ':' } }),
+        morningTime: { startsWith: currentKstHour + ':' },
         user: {
           subscriptions: {
             some: { status: { in: ['active', 'trial'] } },
