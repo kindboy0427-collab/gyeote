@@ -4,18 +4,18 @@ import { sendPushToUser } from '@/src/lib/push'
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const { message } = await request.json()
 
     if (!message?.trim()) {
       return NextResponse.json({ error: '메시지를 입력해주세요' }, { status: 400 })
     }
 
-    // Response id로 부모님 조회
     const response = await prisma.response.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         parent: {
           include: {
@@ -32,7 +32,6 @@ export async function POST(
     const userId = response.parent.userId
     const parentName = response.parent.name
 
-    // 자녀에게 웹푸시 발송
     await sendPushToUser(
       userId,
       `${parentName}님의 마음 💌`,
