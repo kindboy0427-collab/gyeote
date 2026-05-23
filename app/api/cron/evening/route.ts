@@ -73,11 +73,11 @@ function isWeekendKst(): boolean {
 }
 
 function createEveningMessage(parentName: string, todayMessage: string) {
-  return `${parentName}님, 오늘 하루도 정말 수고 많으셨어요 🌙\n\n${todayMessage}\n\n매일 건강하게 계셔주시는 것만으로도\n곁에 있는 우리 모두가 행복해요 ❤️\n\n항상 당신 곁에 있을게요.\n- 곁에`
+  return `${parentName}님, 오늘 하루도 수고 많으셨어요 🌙\n\n${todayMessage}\n\n오늘 저녁은 따뜻하게 챙겨드세요.\n\n항상 응원 곁에 있을게요.\n- 곁에`
 }
 
 function createFridayEveningMessage(parentName: string, todayMessage: string) {
-  return `${parentName}님, 한 주 동안 정말 수고 많으셨어요 🌙\n\n${todayMessage}\n\n자녀분께 전하고 싶은 말씀이 있으신가요? 😊\n때로는 얼굴을 마주하지 않고 글로 진심을 전하는 게\n더 깊게 와닿을 때가 있더라구요.\n\n짧은 한 마디도 괜찮아요.\n매주 금요일, 곁에가 그 마음을 자녀분께 전달할게요 💌\n\n항상 당신 곁에 있을게요.\n- 곁에`
+  return `${parentName}님, 한 주도 수고 많으셨어요 🌙\n\n${todayMessage}\n\n이번 한 주는 어떠셨나요?\n자녀에게 전하고 싶은 말이 있으시면 아래 버튼을 눌러 마음을 전해보세요 💌\n\n항상 곁에 있을게요.\n- 곁에`
 }
 
 export async function GET(request: NextRequest) {
@@ -101,7 +101,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({
         ok: true,
         blocked: true,
-        message: `저녁 알림 허용 시간(${SEND_START_HHMM}~${SEND_END_HHMM}) 밖입니다.`,
+        message: `발송 시간 범위(${SEND_START_HHMM}~${SEND_END_HHMM}) 외입니다.`,
         currentKstHHmm,
       })
     }
@@ -140,15 +140,20 @@ export async function GET(request: NextRequest) {
         ? process.env.KAKAO_ALIMTALK_TEMPLATE_CODE_EVENING_FRIDAY
         : process.env.KAKAO_ALIMTALK_TEMPLATE_CODE_EVENING
 
-      await prisma.response.create({
+      const newResponse = await prisma.response.create({
         data: { parentId: parent.id, responded: false, message, type: 'evening' },
       })
+
+      const linkUrl = friday
+        ? `https://gyeote-eight.vercel.app/message/${newResponse.id}`
+        : undefined
 
       const alimtalkResult = await sendKakaoAlimtalk({
         to: parent.phone,
         parentName: parent.name,
         message: todayMessage,
         templateCode,
+        linkUrl,
       })
 
       await prisma.notificationLog.create({
@@ -159,7 +164,7 @@ export async function GET(request: NextRequest) {
           status: alimtalkResult.success ? 'sent' : 'failed',
           message,
           error: alimtalkResult.error ?? null,
-          rawData: JSON.parse(JSON.stringify({ kind: friday ? 'EVENING_FRIDAY' : 'EVENING', ...alimtalkResult })),
+          rawData: JSON.parse(JSON.stringify({ kind: friday ? 'EVENING_FRIDAY' : 'EVENING', linkUrl, ...alimtalkResult })),
         },
       })
 
@@ -168,6 +173,7 @@ export async function GET(request: NextRequest) {
         parentName: parent.name,
         status: alimtalkResult.success ? 'sent' : 'failed',
         type: friday ? 'friday' : 'weekday',
+        linkUrl,
       })
     }
 

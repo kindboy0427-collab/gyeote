@@ -5,6 +5,7 @@ type AlimtalkPayload = {
   parentName: string
   message: string
   templateCode?: string
+  linkUrl?: string
 }
 
 type AlimtalkResult = {
@@ -96,10 +97,10 @@ export async function generateTodayMessage(timeOfDay: 'morning' | 'lunch' | 'eve
 
     const timeLabel = timeOfDay === 'morning' ? '아침' : timeOfDay === 'lunch' ? '점심' : '저녁'
     const tone = timeOfDay === 'morning'
-      ? '오늘 하루 활기차게 시작하시길 바라는 따뜻한 아침 인사 톤'
+      ? '하루를 시작하는 기분으로 응원하는 아침 인사 톤'
       : timeOfDay === 'lunch'
-      ? '점심 식사 잘 하셨는지 챙기는 따뜻한 안부 톤'
-      : '오늘 하루 수고하셨다는 격려와 따뜻한 위로의 저녁 톤'
+      ? '점심 식사 잘 챙겼는지 묻는 따뜻한 톤'
+      : '하루를 마무리하며 수고했다는 저녁 톤'
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -115,16 +116,16 @@ export async function generateTodayMessage(timeOfDay: 'morning' | 'lunch' | 'eve
           {
             role: 'user',
             content: `오늘은 ${month} ${date}일 ${dayOfWeek}이고 ${season}입니다.
-자녀를 대신해서 부모님께 보내는 ${timeLabel} 안부 한마디를 써주세요.
+어르신께 보내는 카카오 알림톡 ${timeLabel} 메시지 한 개를 작성해주세요.
 조건:
 - 2~3문장으로 짧게
 - ${tone}
-- 오늘 날씨, 요일, 계절을 자연스럽게 녹여서
-- 진심이 느껴지고 감성적으로
+- 오늘 날씨, 계절, 요일을 자연스럽게 연결
+- 친근하고 따뜻하게
 - 존댓말 사용
-- 이모지 1개 포함
-- "아프거나", "불편하신", "곁에 있을게요", "항상 당신" 문구 절대 포함하지 말 것
-- 앞뒤 설명 없이 문구만 출력`,
+- 이모지 1개만 포함
+- "카카오봇", "안녕하세요", "곁에 있을게요", "항상 응원" 같은 말은 포함하지 말 것
+- 출력 형식 없이 문장만 출력`,
           },
         ],
       }),
@@ -138,7 +139,7 @@ export async function generateTodayMessage(timeOfDay: 'morning' | 'lunch' | 'eve
 }
 
 export function createMorningAlimtalkMessage(parentName: string, todayMessage: string) {
-  return `${parentName}님, 좋은 아침이에요 🌞\n\n${todayMessage}\n\n아프거나 불편하신 게 있으시면 언제든지 편하게 말씀해 주세요.\n\n항상 당신 곁에 있을게요.\n- 곁에`
+  return `${parentName}님, 좋은 아침이에요 🌅\n\n${todayMessage}\n\n카카오봇 안녕하세요 식사 잘 챙기시면 버튼을 눌러주세요\n\n항상 응원 곁에 있을게요.\n- 곁에`
 }
 
 export async function sendKakaoAlimtalk({
@@ -146,6 +147,7 @@ export async function sendKakaoAlimtalk({
   parentName,
   message,
   templateCode,
+  linkUrl,
 }: AlimtalkPayload): Promise<AlimtalkResult> {
   try {
     const config = getAlimtalkConfig(templateCode)
@@ -156,9 +158,18 @@ export async function sendKakaoAlimtalk({
         status: 200,
         statusText: 'skipped',
         reason: 'ALIMTALK_NOT_CONFIGURED',
-        error: `카카오 알림톡 설정값이 없습니다: ${config.missing.join(', ')}`,
+        error: `필수 환경변수 설정이 없습니다: ${config.missing.join(', ')}`,
         data: { missingEnv: config.missing },
       }
+    }
+
+    const variables: Record<string, string> = {
+      '#{이름}': parentName,
+      '#{오늘의한마디}': message,
+    }
+
+    if (linkUrl) {
+      variables['#{링크}'] = linkUrl
     }
 
     const payload = {
@@ -170,10 +181,7 @@ export async function sendKakaoAlimtalk({
           pfId: config.senderKey,
           templateId: config.templateCode,
           disableSms: true,
-          variables: {
-            '#{이름}': parentName,
-            '#{오늘의한마디}': message,
-          },
+          variables,
         },
       },
     }
