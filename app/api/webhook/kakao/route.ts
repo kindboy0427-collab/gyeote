@@ -6,34 +6,6 @@ export const runtime = 'nodejs'
 
 const KST_TIME_ZONE = 'Asia/Seoul'
 
-// ?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�
-// ?�??
-// ?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�
-
-type SolapiInboundBody =
-  | {
-      data: {
-        type?: string
-        messageId?: string
-        from?: string
-        content?: { text?: string }
-      }
-    }
-  | {
-      type?: string
-      messageId?: string
-      from?: string
-      text?: string
-    }
-
-// ?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�
-// ?�틸
-// ?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�
-
-function normalizePhone(phone: string): string {
-  return phone.replace(/[^0-9]/g, '')
-}
-
 function getKstParts(date = new Date()) {
   const formatter = new Intl.DateTimeFormat('en-CA', {
     timeZone: KST_TIME_ZONE,
@@ -45,20 +17,11 @@ function getKstParts(date = new Date()) {
     second: '2-digit',
     hourCycle: 'h23',
   })
-
   const parts = formatter.formatToParts(date)
   const values = Object.fromEntries(
     parts.filter((p) => p.type !== 'literal').map((p) => [p.type, p.value])
   )
-
-  return {
-    year: values.year,
-    month: values.month,
-    day: values.day,
-    hour: values.hour,
-    minute: values.minute,
-    second: values.second,
-  }
+  return { year: values.year, month: values.month, day: values.day, hour: values.hour }
 }
 
 function getTodayKstRange() {
@@ -75,57 +38,23 @@ function inferResponseType(kstHour: number): 'morning' | 'lunch' | 'evening' {
   return 'evening'
 }
 
-function parsePayload(body: SolapiInboundBody): {
-  fromPhone: string | null
-  text: string
-  messageId: string
-} {
-  if ('data' in body && body.data) {
-    return {
-      fromPhone: body.data.from ?? null,
-      text: body.data.content?.text ?? '',
-      messageId: body.data.messageId ?? '',
-    }
-  }
-  if ('from' in body) {
-    return {
-      fromPhone: body.from ?? null,
-      text: (body as { text?: string }).text ?? '',
-      messageId: (body as { messageId?: string }).messageId ?? '',
-    }
-  }
-  return { fromPhone: null, text: '', messageId: '' }
-}
-
-// ?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�
-// GET: ?�라???�훅 ?�록 ???�결 ?�인??
-// ?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�
-
 export async function GET(request: NextRequest) {
   const challenge = request.nextUrl.searchParams.get('challenge')
-  if (challenge) {
-    return NextResponse.json({ challenge })
-  }
+  if (challenge) return NextResponse.json({ challenge })
   return NextResponse.json({ ok: true, message: 'Kakao webhook is alive.' })
 }
 
-// ?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�
-// POST: ?�라????부모님 ?�장 ?�신
-// ?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�
-
 export async function POST(request: NextRequest) {
-  // 1. 쿼리 ?�라미터�??�크�?검�?
   const webhookSecret = process.env.WEBHOOK_SECRET
   if (webhookSecret) {
     const token = request.nextUrl.searchParams.get('secret')
     if (!token || token !== webhookSecret) {
-      console.warn('[KAKAO_WEBHOOK] ?�증 ?�패 - ?�못??secret')
+      console.warn('[KAKAO_WEBHOOK] 인증 실패')
       return NextResponse.json({ ok: false, message: 'Unauthorized' }, { status: 401 })
     }
   }
 
-  // 2. JSON ?�싱
-  let body: SolapiInboundBody
+  let body: Record<string, unknown>
   try {
     body = await request.json()
   } catch {
@@ -133,24 +62,30 @@ export async function POST(request: NextRequest) {
   }
 
   console.log('[KAKAO_WEBHOOK] body:', JSON.stringify(body))
-  const { fromPhone, text, messageId } = parsePayload(body)
 
-  if (!fromPhone) {
-    console.warn('[KAKAO_WEBHOOK] 발신??번호 ?�음')
-    return NextResponse.json({ ok: true, message: 'No sender phone ??ignored' })
+  // kakaoId 추출
+  const userRequest = body.userRequest as Record<string, unknown> | undefined
+  const user = userRequest?.user as Record<string, unknown> | undefined
+  const properties = user?.properties as Record<string, unknown> | undefined
+  const kakaoId = (properties?.plusfriend_user_key ?? properties?.plusfriendUserKey) as string | null
+
+  if (!kakaoId) {
+    console.warn('[KAKAO_WEBHOOK] kakaoId 없음')
+    return NextResponse.json({ ok: true, message: 'No kakaoId - ignored' })
   }
 
-  const normalizedPhone = normalizePhone(fromPhone)
+  const utterance = (userRequest?.utterance as string) ?? ''
 
-  // 3. ?�화번호�?부모님 조회
+  // kakaoId로 부모님 조회
   const parent = await prisma.parent.findFirst({
-    where: { phone: normalizedPhone },
+    where: { kakaoId },
     select: { id: true, name: true, phone: true, userId: true },
   })
 
   if (!parent) {
-    console.log(`[KAKAO_WEBHOOK] 매칭?�는 부모님 ?�음: ${normalizedPhone}`)
-    return NextResponse.json({ ok: true, message: 'No matched parent ??ignored' })
+    // kakaoId 저장 시도 (웰컴 블록 또는 첫 발화)
+    console.log(`[KAKAO_WEBHOOK] 매칭 부모 없음 - kakaoId: ${kakaoId}`)
+    return NextResponse.json({ ok: true, message: 'No matched parent - ignored' })
   }
 
   const now = new Date()
@@ -158,7 +93,6 @@ export async function POST(request: NextRequest) {
   const responseType = inferResponseType(kstHour)
   const { start, end } = getTodayKstRange()
 
-  // 4. ?�늘 Response 조회 ??upsert
   const existing = await prisma.response.findFirst({
     where: {
       parentId: parent.id,
@@ -171,11 +105,7 @@ export async function POST(request: NextRequest) {
   const response = existing
     ? await prisma.response.update({
         where: { id: existing.id },
-        data: {
-          responded: true,
-          respondedAt: now,
-          message: text,
-        },
+        data: { responded: true, respondedAt: now, message: utterance },
       })
     : await prisma.response.create({
         data: {
@@ -183,33 +113,29 @@ export async function POST(request: NextRequest) {
           type: responseType,
           responded: true,
           respondedAt: now,
-          message: text,
+          message: utterance,
           date: now,
         },
       })
 
-  // 5. ?�신 로그 기록 (reply-check ?�론 ?�단??
   await prisma.notificationLog.create({
     data: {
       userId: parent.userId,
       parentId: parent.id,
       channel: 'KAKAO_ALIMTALK',
       status: 'sent',
-      message: text,
+      message: utterance,
       rawData: {
         kind: 'inbound_reply',
         responseId: response.id,
         responseType,
-        messageId,
-        fromPhone: normalizedPhone,
+        kakaoId,
         receivedAt: now.toISOString(),
       },
     },
   })
 
-  console.log(
-    `[KAKAO_WEBHOOK] ??${parent.name}(${normalizedPhone}) ?�장 ?�신 [${responseType}]: "${text}"`
-  )
+  console.log(`[KAKAO_WEBHOOK] ${parent.name}(${kakaoId}) 답장 [${responseType}]: "${utterance}"`)
 
   return NextResponse.json({
     ok: true,
