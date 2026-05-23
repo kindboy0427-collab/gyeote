@@ -77,7 +77,7 @@ export default function OnboardPage() {
   }
 
   const copyChannelLink = () => {
-    navigator.clipboard.writeText('https://pf.kakao.com/_ahnsim')
+    navigator.clipboard.writeText('http://pf.kakao.com/_tYbKX/friend')
     setCopied(true)
     setTimeout(() => setCopied(false), 3000)
   }
