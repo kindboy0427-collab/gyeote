@@ -88,16 +88,18 @@ export async function GET(request: NextRequest) {
 
     const currentKstHHmm = getCurrentKstHHmm()
     const { start, end } = getTodayKstRange()
-    const friday = isFriday()
+    const forceRun = new URL(request.url).searchParams.get('force') === 'true'
+    const forceFriday = new URL(request.url).searchParams.get('friday') === 'true'
+    const friday = forceFriday || isFriday()
 
-    if (!isWithinSendWindow(currentKstHHmm)) {
+    if (!forceRun && !isWithinSendWindow(currentKstHHmm)) {
       return NextResponse.json({
-        ok: true,
-        blocked: true,
-        message: `?�???�림 ?�용 ?�간(${SEND_START_HHMM}~${SEND_END_HHMM}) 밖입?�다.`,
-        currentKstHHmm,
-      })
-    }
+       ok: true,
+       blocked: true,
+       message: `저녁 알림 허용 시간(${SEND_START_HHMM}~${SEND_END_HHMM}) 밖입니다.`,
+       currentKstHHmm,
+  })
+}
 
     const parents = await prisma.parent.findMany({
       where: {

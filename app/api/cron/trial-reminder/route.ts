@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { sendKakaoAlimtalk } from '@/lib/kakao/alimtalk'
 import crypto from 'crypto'
 
-export async function POST(req: NextRequest) {
+export async function GET(req: NextRequest) {
   const auth = req.headers.get('authorization')
   if (auth !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
