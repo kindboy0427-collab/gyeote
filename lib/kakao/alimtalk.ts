@@ -6,6 +6,7 @@ type AlimtalkPayload = {
   message: string
   templateCode?: string
   linkUrl?: string
+  extraVariables?: Record<string, string>
 }
 
 type AlimtalkResult = {
@@ -139,7 +140,7 @@ export async function generateTodayMessage(timeOfDay: 'morning' | 'lunch' | 'eve
 }
 
 export function createMorningAlimtalkMessage(parentName: string, todayMessage: string) {
-  return `${parentName}님, 좋은 아침이에요 🌅\n\n${todayMessage}\n\n카카오봇 안녕하세요 식사 잘 챙기시면 버튼을 눌러주세요\n\n항상 응원 곁에 있을게요.\n- 곁에`
+  return `${parentName}님, 좋은 아침이에요 🌅\n\n${todayMessage}\n\n식사 잘 챙기시면 버튼을 눌러주세요\n\n항상 곁에 있을게요.\n- 곁에`
 }
 
 export async function sendKakaoAlimtalk({
@@ -148,6 +149,7 @@ export async function sendKakaoAlimtalk({
   message,
   templateCode,
   linkUrl,
+  extraVariables,
 }: AlimtalkPayload): Promise<AlimtalkResult> {
   try {
     const config = getAlimtalkConfig(templateCode)
@@ -166,6 +168,7 @@ export async function sendKakaoAlimtalk({
     const variables: Record<string, string> = {
       '#{이름}': parentName,
       '#{오늘의한마디}': message,
+      ...extraVariables,
     }
 
     if (linkUrl) {

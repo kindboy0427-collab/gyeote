@@ -30,28 +30,15 @@ type NotificationLogForCheck = {
 
 function getBearerToken(request: NextRequest) {
   const authHeader = request.headers.get('authorization')
-
-  if (!authHeader) {
-    return null
-  }
-
-  if (!authHeader.startsWith('Bearer ')) {
-    return null
-  }
-
+  if (!authHeader) return null
+  if (!authHeader.startsWith('Bearer ')) return null
   return authHeader.replace('Bearer ', '').trim()
 }
 
 function isCronAuthorized(request: NextRequest) {
   const cronSecret = process.env.CRON_SECRET
-
-  if (!cronSecret) {
-    return true
-  }
-
-  const token = getBearerToken(request)
-
-  return token === cronSecret
+  if (!cronSecret) return true
+  return getBearerToken(request) === cronSecret
 }
 
 function getKstParts(date = new Date()) {
@@ -85,19 +72,9 @@ function getKstParts(date = new Date()) {
 
 function getTodayKstRange() {
   const parts = getKstParts()
-
-  const start = new Date(
-    `${parts.year}-${parts.month}-${parts.day}T00:00:00.000+09:00`
-  )
-
-  const end = new Date(
-    `${parts.year}-${parts.month}-${parts.day}T23:59:59.999+09:00`
-  )
-
-  return {
-    start,
-    end,
-  }
+  const start = new Date(`${parts.year}-${parts.month}-${parts.day}T00:00:00.000+09:00`)
+  const end = new Date(`${parts.year}-${parts.month}-${parts.day}T23:59:59.999+09:00`)
+  return { start, end }
 }
 
 function getElapsedHours(from: Date, to = new Date()) {
@@ -114,22 +91,17 @@ function createFollowUpMessage(parentName: string) {
 }
 
 function createGuardianAlertMessage(parentName: string) {
-  return `${parentName}님이 오늘 아침 안부 알림 이후 3시간 동안 답장하지 않으셨어요.
+  return `${parentName} 부모님께서 오늘 아침 안부에 3시간이 동안 응답하지 않으셨어요.
 
-확인이 필요할 수 있습니다.
+아무일 없으시겠지만
+시간이 되실 때 연락해 보시는 건 어떨까요? 🙏
 
 - 곁에`
 }
 
 function getLogStatus(statusText: 'sent' | 'failed' | 'skipped') {
-  if (statusText === 'sent') {
-    return 'sent'
-  }
-
-  if (statusText === 'skipped') {
-    return 'skipped'
-  }
-
+  if (statusText === 'sent') return 'sent'
+  if (statusText === 'skipped') return 'skipped'
   return 'failed'
 }
 
@@ -140,16 +112,8 @@ function findLogByKind(
 ) {
   return logs.find((log) => {
     const rawData = log.rawData
-
-    if (!rawData || typeof rawData !== 'object') {
-      return false
-    }
-
-    const data = rawData as {
-      responseId?: unknown
-      kind?: unknown
-    }
-
+    if (!rawData || typeof rawData !== 'object') return false
+    const data = rawData as { responseId?: unknown; kind?: unknown }
     return data.responseId === responseId && data.kind === kind
   })
 }
@@ -157,13 +121,7 @@ function findLogByKind(
 export async function GET(request: NextRequest) {
   try {
     if (!isCronAuthorized(request)) {
-      return NextResponse.json(
-        {
-          ok: false,
-          message: 'Unauthorized',
-        },
-        { status: 401 }
-      )
+      return NextResponse.json({ ok: false, message: 'Unauthorized' }, { status: 401 })
     }
 
     const { start, end } = getTodayKstRange()
@@ -173,11 +131,7 @@ export async function GET(request: NextRequest) {
         isActive: true,
         user: {
           subscriptions: {
-            some: {
-              status: {
-                in: ['active', 'trial'],
-              },
-            },
+            some: { status: { in: ['active', 'trial'] } },
           },
         },
       },
@@ -193,26 +147,14 @@ export async function GET(request: NextRequest) {
         responses: {
           where: {
             type: 'morning',
-            date: {
-              gte: start,
-              lte: end,
-            },
+            date: { gte: start, lte: end },
           },
-          orderBy: {
-            date: 'desc',
-          },
+          orderBy: { date: 'desc' },
           take: 1,
         },
         notificationLogs: {
-          where: {
-            createdAt: {
-              gte: start,
-              lte: end,
-            },
-          },
-          orderBy: {
-            createdAt: 'desc',
-          },
+          where: { createdAt: { gte: start, lte: end } },
+          orderBy: { createdAt: 'desc' },
         },
       },
     })
@@ -239,7 +181,6 @@ export async function GET(request: NextRequest) {
           status: 'no_response_yet',
           reason: '오늘 최초 아침 Response가 없습니다.',
         })
-
         continue
       }
 
@@ -252,7 +193,6 @@ export async function GET(request: NextRequest) {
           status: 'responded',
           reason: '오늘 답장 완료 상태입니다.',
         })
-
         continue
       }
 
@@ -316,7 +256,6 @@ export async function GET(request: NextRequest) {
             reason: alimtalkResult.reason ?? 'ALIMTALK_NOT_CONFIGURED',
             error: alimtalkResult.error,
           })
-
           continue
         }
 
@@ -330,7 +269,6 @@ export async function GET(request: NextRequest) {
             status: 'follow_up_failed',
             error: alimtalkResult.error ?? '추가 알림톡 발송 실패',
           })
-
           continue
         }
 
@@ -343,7 +281,6 @@ export async function GET(request: NextRequest) {
           status: 'follow_up_sent',
           reason: '최초 아침 알림 후 2시간 무응답으로 부모님 추가 알림 1회 발송',
         })
-
         continue
       }
 
@@ -357,14 +294,11 @@ export async function GET(request: NextRequest) {
           status: 'follow_up_already_sent',
           reason: '부모님 추가 알림은 이미 발송됐고, 아직 3시간 무응답 기준 전입니다.',
         })
-
         continue
       }
 
       if (followUpLog && elapsedHours >= GUARDIAN_ALERT_AFTER_HOURS) {
-        const elapsedAfterFollowUpHours = getElapsedHours(
-          new Date(followUpLog.createdAt)
-        )
+        const elapsedAfterFollowUpHours = getElapsedHours(new Date(followUpLog.createdAt))
 
         if (elapsedAfterFollowUpHours < GUARDIAN_ALERT_AFTER_FOLLOW_UP_HOURS) {
           results.push({
@@ -376,7 +310,6 @@ export async function GET(request: NextRequest) {
             status: 'follow_up_already_sent',
             reason: '부모님 추가 알림 후 아직 1시간이 지나지 않았습니다.',
           })
-
           continue
         }
 
@@ -390,7 +323,6 @@ export async function GET(request: NextRequest) {
             status: 'guardian_alert_already_sent',
             reason: '보호자 카톡 알림이 이미 발송됐습니다.',
           })
-
           continue
         }
 
@@ -424,18 +356,21 @@ export async function GET(request: NextRequest) {
             status: 'guardian_phone_missing',
             reason: '보호자 전화번호가 등록되어 있지 않습니다.',
           })
-
           continue
         }
 
         const guardianMessage = createGuardianAlertMessage(parent.name)
 
         const guardianAlimtalkResult = await sendKakaoAlimtalk({
-  to: parent.user.guardianPhone,
-  parentName: '보호자',
-  message: guardianMessage,
-  templateCode: process.env.KAKAO_ALIMTALK_TEMPLATE_CODE_GUARDIAN_ALERT,
-})
+          to: parent.user.guardianPhone,
+          parentName: parent.user.name ?? '자녀',
+          message: guardianMessage,
+          templateCode: process.env.KAKAO_ALIMTALK_TEMPLATE_CODE_GUARDIAN_ALERT,
+          extraVariables: {
+            '#{자녀이름}': parent.user.name ?? '자녀',
+            '#{부모님이름}': parent.name,
+          },
+        })
 
         const guardianLogStatus = getLogStatus(guardianAlimtalkResult.statusText)
 
@@ -446,10 +381,7 @@ export async function GET(request: NextRequest) {
             channel: 'GUARDIAN_ALERT',
             status: guardianLogStatus,
             message: guardianMessage,
-            error:
-              guardianAlimtalkResult.reason ??
-              guardianAlimtalkResult.error ??
-              null,
+            error: guardianAlimtalkResult.reason ?? guardianAlimtalkResult.error ?? null,
             rawData: {
               kind: 'GUARDIAN_ALERT_SENT',
               responseId: response.id,
@@ -475,12 +407,9 @@ export async function GET(request: NextRequest) {
             responseId: response.id,
             elapsedHours,
             status: 'guardian_alert_skipped',
-            reason:
-              guardianAlimtalkResult.reason ??
-              'GUARDIAN_ALERT_ALIMTALK_NOT_CONFIGURED',
+            reason: guardianAlimtalkResult.reason ?? 'GUARDIAN_ALERT_ALIMTALK_NOT_CONFIGURED',
             error: guardianAlimtalkResult.error,
           })
-
           continue
         }
 
@@ -492,11 +421,8 @@ export async function GET(request: NextRequest) {
             responseId: response.id,
             elapsedHours,
             status: 'guardian_alert_failed',
-            error:
-              guardianAlimtalkResult.error ??
-              '보호자 카카오 알림톡 발송 실패',
+            error: guardianAlimtalkResult.error ?? '보호자 카카오 알림톡 발송 실패',
           })
-
           continue
         }
 
@@ -507,10 +433,8 @@ export async function GET(request: NextRequest) {
           responseId: response.id,
           elapsedHours,
           status: 'guardian_alert_sent',
-          reason:
-            '최초 아침 알림 후 3시간 무응답 + 부모님 추가 알림 후 1시간 무응답으로 보호자 카톡 발송',
+          reason: '최초 아침 알림 후 3시간 무응답 + 부모님 추가 알림 후 1시간 무응답으로 보호자 카톡 발송',
         })
-
         continue
       }
 
@@ -527,38 +451,17 @@ export async function GET(request: NextRequest) {
 
     const summary = {
       totalParents: parents.length,
-      responded: results.filter((result) => result.status === 'responded')
-        .length,
-      noResponseYet: results.filter(
-        (result) => result.status === 'no_response_yet'
-      ).length,
-      followUpSent: results.filter(
-        (result) => result.status === 'follow_up_sent'
-      ).length,
-      followUpFailed: results.filter(
-        (result) => result.status === 'follow_up_failed'
-      ).length,
-      followUpSkipped: results.filter(
-        (result) => result.status === 'follow_up_skipped'
-      ).length,
-      followUpAlreadySent: results.filter(
-        (result) => result.status === 'follow_up_already_sent'
-      ).length,
-      guardianAlertSent: results.filter(
-        (result) => result.status === 'guardian_alert_sent'
-      ).length,
-      guardianAlertFailed: results.filter(
-        (result) => result.status === 'guardian_alert_failed'
-      ).length,
-      guardianAlertSkipped: results.filter(
-        (result) => result.status === 'guardian_alert_skipped'
-      ).length,
-      guardianAlertAlreadySent: results.filter(
-        (result) => result.status === 'guardian_alert_already_sent'
-      ).length,
-      guardianPhoneMissing: results.filter(
-        (result) => result.status === 'guardian_phone_missing'
-      ).length,
+      responded: results.filter((r) => r.status === 'responded').length,
+      noResponseYet: results.filter((r) => r.status === 'no_response_yet').length,
+      followUpSent: results.filter((r) => r.status === 'follow_up_sent').length,
+      followUpFailed: results.filter((r) => r.status === 'follow_up_failed').length,
+      followUpSkipped: results.filter((r) => r.status === 'follow_up_skipped').length,
+      followUpAlreadySent: results.filter((r) => r.status === 'follow_up_already_sent').length,
+      guardianAlertSent: results.filter((r) => r.status === 'guardian_alert_sent').length,
+      guardianAlertFailed: results.filter((r) => r.status === 'guardian_alert_failed').length,
+      guardianAlertSkipped: results.filter((r) => r.status === 'guardian_alert_skipped').length,
+      guardianAlertAlreadySent: results.filter((r) => r.status === 'guardian_alert_already_sent').length,
+      guardianPhoneMissing: results.filter((r) => r.status === 'guardian_phone_missing').length,
     }
 
     return NextResponse.json({
@@ -572,10 +475,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(
       {
         ok: false,
-        message:
-          error instanceof Error
-            ? error.message
-            : '답장 확인 Cron 처리 중 오류가 발생했습니다.',
+        message: error instanceof Error ? error.message : '답장 확인 Cron 처리 중 오류가 발생했습니다.',
       },
       { status: 500 }
     )
