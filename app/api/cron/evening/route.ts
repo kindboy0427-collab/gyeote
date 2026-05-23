@@ -150,7 +150,7 @@ export async function GET(request: NextRequest) {
       const alimtalkResult = await sendKakaoAlimtalk({
         to: parent.phone,
         parentName: parent.name,
-        message,
+        message: todayMessage,
         templateCode,
       })
 

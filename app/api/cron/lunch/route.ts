@@ -177,7 +177,7 @@ export async function GET(request: NextRequest) {
       const alimtalkResult = await sendKakaoAlimtalk({
         to: parent.phone,
         parentName: parent.name,
-        message,
+        message: todayMessage,
         templateCode: medication
           ? process.env.KAKAO_ALIMTALK_TEMPLATE_CODE_LUNCH_MED
           : process.env.KAKAO_ALIMTALK_TEMPLATE_CODE_LUNCH,
