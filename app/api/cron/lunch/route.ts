@@ -112,8 +112,9 @@ export async function GET(request: NextRequest) {
 
     const currentKstHHmm = getCurrentKstHHmm()
     const { start, end } = getTodayKstRange()
+    const forceRun = new URL(request.url).searchParams.get('force') === 'true'
 
-    if (!isWithinSendWindow(currentKstHHmm)) {
+    if (!forceRun && !isWithinSendWindow(currentKstHHmm)) {
       return NextResponse.json({
         ok: true,
         blocked: true,
