@@ -77,6 +77,7 @@ export async function POST(request: NextRequest) {
   })
 
   if (!parent) {
+    // 1. 전화번호로 매칭 시도 (utterance가 전화번호인 경우)
     let normalizedPhone = utterance.replace(/[^0-9]/g, '')
     if (normalizedPhone.startsWith('82') && normalizedPhone.length === 11) {
       normalizedPhone = '0' + normalizedPhone.slice(2)
@@ -95,8 +96,24 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ ok: true, message: 'kakaoId saved' })
       }
     }
-    console.log(`[KAKAO_WEBHOOK] 매칭 부모 없음 - kakaoId: ${kakaoId}`)
-    return NextResponse.json({ ok: true, message: 'No matched parent - ignored' })
+
+    // 2. kakaoId 없는 가장 최근 부모님에 자동 저장
+    const unlinkedParent = await prisma.parent.findFirst({
+      where: { kakaoId: null, isActive: true },
+      orderBy: { createdAt: 'desc' },
+      select: { id: true, name: true, phone: true, userId: true },
+    })
+    if (unlinkedParent) {
+      await prisma.parent.update({
+        where: { id: unlinkedParent.id },
+        data: { kakaoId },
+      })
+      console.log(`[KAKAO_WEBHOOK] kakaoId 자동 저장: ${unlinkedParent.name} → ${kakaoId}`)
+      parent = unlinkedParent
+    } else {
+      console.log(`[KAKAO_WEBHOOK] 매칭 부모 없음 - kakaoId: ${kakaoId}`)
+      return NextResponse.json({ ok: true, message: 'No matched parent - ignored' })
+    }
   }
 
   const now = new Date()
