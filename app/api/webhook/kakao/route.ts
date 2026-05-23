@@ -57,6 +57,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: false, message: 'Invalid JSON' }, { status: 400 })
   }
 
+  console.log('[KAKAO_WEBHOOK] body:', JSON.stringify(body))
+
   const userRequest = body.userRequest as Record<string, unknown> | undefined
   const user = userRequest?.user as Record<string, unknown> | undefined
   const properties = user?.properties as Record<string, unknown> | undefined
@@ -69,37 +71,33 @@ export async function POST(request: NextRequest) {
 
   const utterance = (userRequest?.utterance as string) ?? ''
 
-  // kakaoId로 부모님 조회
   let parent = await prisma.parent.findFirst({
     where: { kakaoId },
     select: { id: true, name: true, phone: true, userId: true },
   })
 
-  // 못 찾으면 kakaoId 없는 가장 최근 부모님에 자동 저장 (채널 추가 시)
   if (!parent) {
-  // 전화번호로 매칭 시도
-  let normalizedPhone = utterance.replace(/[^0-9]/g, '')
-// 국제번호 형식 처리 (82로 시작하면 0으로 교체)
-if (normalizedPhone.startsWith('82') && normalizedPhone.length === 11) {
-  normalizedPhone = '0' + normalizedPhone.slice(2)
-}
-if (normalizedPhone.length >= 10) {
-  const parentByPhone = await prisma.parent.findFirst({
-    where: { phone: normalizedPhone },
-      select: { id: true, name: true, phone: true, userId: true },
-    })
-    if (parentByPhone) {
-      await prisma.parent.update({
-        where: { id: parentByPhone.id },
-        data: { kakaoId },
-      })
-      console.log(`[KAKAO_WEBHOOK] kakaoId 저장: ${parentByPhone.name}(${normalizedPhone}) → ${kakaoId}`)
-      return NextResponse.json({ ok: true, message: 'kakaoId saved' })
+    let normalizedPhone = utterance.replace(/[^0-9]/g, '')
+    if (normalizedPhone.startsWith('82') && normalizedPhone.length === 11) {
+      normalizedPhone = '0' + normalizedPhone.slice(2)
     }
+    if (normalizedPhone.length >= 10) {
+      const parentByPhone = await prisma.parent.findFirst({
+        where: { phone: normalizedPhone },
+        select: { id: true, name: true, phone: true, userId: true },
+      })
+      if (parentByPhone) {
+        await prisma.parent.update({
+          where: { id: parentByPhone.id },
+          data: { kakaoId },
+        })
+        console.log(`[KAKAO_WEBHOOK] kakaoId 저장: ${parentByPhone.name}(${normalizedPhone}) → ${kakaoId}`)
+        return NextResponse.json({ ok: true, message: 'kakaoId saved' })
+      }
+    }
+    console.log(`[KAKAO_WEBHOOK] 매칭 부모 없음 - kakaoId: ${kakaoId}`)
+    return NextResponse.json({ ok: true, message: 'No matched parent - ignored' })
   }
-  console.log(`[KAKAO_WEBHOOK] 매칭 부모 없음 - kakaoId: ${kakaoId}`)
-  return NextResponse.json({ ok: true, message: 'No matched parent - ignored' })
-}
 
   const now = new Date()
   const kstHour = Number(getKstParts(now).hour)
