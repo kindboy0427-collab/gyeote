@@ -6,9 +6,9 @@ export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 const KST_TIME_ZONE = 'Asia/Seoul'
-const FOLLOW_UP_AFTER_HOURS = 0
-const GUARDIAN_ALERT_AFTER_HOURS = 0
-const GUARDIAN_ALERT_AFTER_FOLLOW_UP_HOURS = 0
+const FOLLOW_UP_AFTER_HOURS = 2
+const GUARDIAN_ALERT_AFTER_HOURS = 3
+const GUARDIAN_ALERT_AFTER_FOLLOW_UP_HOURS = 1
 
 type ReplyCheckStatus =
   | 'no_response_yet'
