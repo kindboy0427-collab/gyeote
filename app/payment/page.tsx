@@ -104,18 +104,22 @@ export default function PaymentPage() {
       }
 
       if (selectedProvider.id === 'TOSS') {
-        const { loadTossPayments } = await import('@tosspayments/payment-sdk')
-        const tossPayments = await loadTossPayments(process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY!)
-        const customerKey = createCustomerKey()
+  const { loadTossPayments } = await import('@tosspayments/payment-sdk')
+  const tossPayments = await loadTossPayments(process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY!)
+  const customerKey = createCustomerKey()
 
-        await tossPayments.requestBillingAuth('카드', {
-          customerKey,
-          successUrl: `${window.location.origin}/payment/success?provider=TOSS&plan=${selectedPlan.id}`,
-          failUrl: `${window.location.origin}/payment/fail?provider=TOSS&plan=${selectedPlan.id}`,
-        })
+  try {
+    await tossPayments.requestBillingAuth('카드', {
+      customerKey,
+      successUrl: `${window.location.origin}/payment/success?provider=TOSS&plan=${selectedPlan.id}`,
+      failUrl: `${window.location.origin}/payment/fail?provider=TOSS&plan=${selectedPlan.id}`,
+    })
+  } catch {
+    setLoading(false)
+  }
 
-        return
-      }
+  return
+}
     } catch (error) {
       console.error('Subscribe error:', error)
       alert(error instanceof Error ? error.message : '구독 결제 중 오류가 발생했습니다.')
